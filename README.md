@@ -76,7 +76,7 @@
 
 ```bash
 sudo -i
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/install.sh -o ~/install.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install.sh -o ~/install.sh
 bash ~/install.sh
 ```
 
@@ -85,7 +85,7 @@ Alpine Linux：
 ```sh
 doas -s
 apk add --no-cache bash curl
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/install.sh -o ~/install.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install.sh -o ~/install.sh
 bash ~/install.sh
 ```
 
@@ -98,7 +98,7 @@ bash ~/install.sh
 
 ```bash
 sudo -i
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/install-xpadding.sh -o ~/install-xpadding.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install-xpadding.sh -o ~/install-xpadding.sh
 bash ~/install-xpadding.sh
 ```
 
@@ -107,7 +107,7 @@ Alpine Linux：
 ```sh
 doas -s
 apk add --no-cache bash curl
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/install-xpadding.sh -o ~/install-xpadding.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install-xpadding.sh -o ~/install-xpadding.sh
 bash ~/install-xpadding.sh
 ```
 
@@ -121,7 +121,7 @@ bash ~/install-xpadding.sh
 
 ```bash
 sudo -i
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/add-dual-cdn.sh -o ~/add-dual-cdn.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-dual-cdn.sh -o ~/add-dual-cdn.sh
 bash ~/add-dual-cdn.sh
 ```
 
@@ -130,7 +130,7 @@ Alpine Linux：
 ```sh
 doas -s
 apk add --no-cache bash curl
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/add-dual-cdn.sh -o ~/add-dual-cdn.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-dual-cdn.sh -o ~/add-dual-cdn.sh
 bash ~/add-dual-cdn.sh
 ```
 
@@ -142,7 +142,7 @@ bash ~/add-dual-cdn.sh
 
 ```bash
 sudo -i
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/add-dual-ip.sh -o ~/add-dual-ip.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-dual-ip.sh -o ~/add-dual-ip.sh
 bash ~/add-dual-ip.sh
 ```
 
@@ -152,7 +152,7 @@ Alpine Linux：
 
 doas -s
 apk add --no-cache bash curl
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/add-dual-ip.sh -o ~/add-dual-ip.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-dual-ip.sh -o ~/add-dual-ip.sh
 bash ~/add-dual-ip.sh
 ```
 
@@ -166,7 +166,7 @@ Debian / Ubuntu：
 
 ```bash
 sudo -i
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/add-quic.sh -o ~/add-quic.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-quic.sh -o ~/add-quic.sh
 bash ~/add-quic.sh
 ```
 
@@ -175,7 +175,7 @@ Alpine Linux：
 ```sh
 doas -s
 apk add --no-cache bash curl
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/add-quic.sh -o ~/add-quic.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-quic.sh -o ~/add-quic.sh
 bash ~/add-quic.sh
 ```
 
@@ -190,7 +190,7 @@ Debian / Ubuntu：
 
 ```bash
 sudo -i
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/add-hysteria2.sh -o ~/add-hysteria2.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-hysteria2.sh -o ~/add-hysteria2.sh
 bash ~/add-hysteria2.sh
 ```
 
@@ -199,7 +199,7 @@ Alpine Linux：
 ```sh
 doas -s
 apk add --no-cache bash curl
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/add-hysteria2.sh -o ~/add-hysteria2.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-hysteria2.sh -o ~/add-hysteria2.sh
 bash ~/add-hysteria2.sh
 ```
 
