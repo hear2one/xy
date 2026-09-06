@@ -1,5 +1,5 @@
 # ==================================================
-# 订阅文件与二维码输出
+# 订阅文件与二维码输出（对齐 extensions/dual-ip/04-subscription-output.sh）
 # ==================================================
 
 update_subscriptions() {
@@ -87,4 +87,8 @@ SUBLINKEOF
 }
 
 update_subscriptions
-info "客户端更新订阅后即可看到新节点"
+
+echo -e "${YELLOW}[+] 别忘了放行新端口${NC}"
+echo "  请在防火墙/安全组放行 TCP ${XRAY_PORT}（如 VPS_IP:${XRAY_PORT} 无法访问请检查）"
+echo "  验证: https://tcp.ping.pe/${BASE_SERVER}:${XRAY_PORT}"
+info "客户端更新订阅后即可看到第 6 个节点：${NODE_NAME}"

@@ -123,6 +123,15 @@ if [[ "$FEATURE_CDN_ECH" == true ]]; then
 fi
 
 echo ""
+echo -e "${YELLOW}[+] geoip/geosite 数据自动更新${NC}"
+read -rp "是否启用 geodata 自动更新（每周一 04:00 检查更新 geoip.dat/geosite.dat 并重启 Xray）[Y/n]: "
+if [[ "${REPLY,,}" =~ ^(y|yes)?$ ]]; then
+  GEODATA_AUTO_UPDATE=true
+else
+  GEODATA_AUTO_UPDATE=false
+fi
+
+echo ""
 info "Reality: $REALITY_DOMAIN"
 info "CDN:     $CDN_DOMAIN"
 if [[ "$FALLBACK_MODE" == "static" ]]; then
@@ -142,5 +151,10 @@ if [[ "$FEATURE_CDN_ECH" == true ]]; then
   else
     info "CDN ECH:          未开启"
   fi
+fi
+if [[ "$GEODATA_AUTO_UPDATE" == true ]]; then
+  info "Geodata 自动更新: 已开启"
+else
+  info "Geodata 自动更新: 未开启"
 fi
 echo ""

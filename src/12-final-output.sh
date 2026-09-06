@@ -31,6 +31,11 @@ if [[ "$FEATURE_CDN_ECH" == true ]]; then
     echo "CDN ECH:        未开启"
   fi
 fi
+if [[ "$GEODATA_AUTO_UPDATE" == true ]]; then
+  echo "Geodata 自动更新: 已开启（每周一 04:00 cron）"
+else
+  echo "Geodata 自动更新: 未开启"
+fi
 echo ""
 echo -e "\n${YELLOW}[+] 客户端节点，已保存到 $USER_HOME/client-config.txt${NC}"
 cat "$USER_HOME/client-config.txt"

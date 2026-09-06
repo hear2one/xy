@@ -185,12 +185,66 @@ for domain in "${PREV_DUAL_IP_DOMAINS[@]}" "$REALITY_DOMAIN_V4" "$REALITY_DOMAIN
   remove_nginx_server_block "$domain" "$tmp_nginx"
 done
 
+# 全局去重：8003 上同名 server 块只保留第一个（清理历史重复残留，V4 复用主域名时必用）
+dedupe_nginx_server_blocks() {
+  local config="$1"
+  local output
+  output=$(mktemp)
+  awk '
+    function count_braces(line, i, c) {
+      for (i = 1; i <= length(line); i++) {
+        c = substr(line, i, 1)
+        if (c == "{") depth++
+        if (c == "}") depth--
+      }
+    }
+    !in_server && /^[[:space:]]*server[[:space:]]*\{/ {
+      in_server = 1
+      depth = 0
+      name = ""
+      block = $0 ORS
+      count_braces($0)
+      next
+    }
+    in_server {
+      block = block $0 ORS
+      if (name == "" && $0 ~ /server_name/) {
+        line = $0
+        sub(/^[[:space:]]*server_name[[:space:]]+/, "", line)
+        split(line, a, /[[:space:];]/)
+        name = a[1]
+      }
+      count_braces($0)
+      if (depth == 0) {
+        if (name == "" || !(name in seen)) {
+          printf "%s", block
+          seen[name] = 1
+        }
+        in_server = 0
+        block = ""
+      }
+      next
+    }
+    { print }
+  ' "$config" > "$output"
+  cat "$output" > "$config"
+  rm -f "$output"
+}
+
 sed -i '$d' "$tmp_nginx"
 {
-  append_reality_block "$REALITY_DOMAIN_V4" "$FALLBACK_ORIGIN_V4" "$FALLBACK_HOST_V4"
-  append_reality_block "$REALITY_DOMAIN_V6" "$FALLBACK_ORIGIN_V6" "$FALLBACK_HOST_V6"
+  # 与主 REALITY_DOMAIN 相同的域名不重复 append（主模板已有该 server 块），避免 nginx 冲突警告
+  if [[ "$REALITY_DOMAIN_V4" != "$REALITY_DOMAIN" ]]; then
+    append_reality_block "$REALITY_DOMAIN_V4" "$FALLBACK_ORIGIN_V4" "$FALLBACK_HOST_V4"
+  fi
+  if [[ "$REALITY_DOMAIN_V6" != "$REALITY_DOMAIN" ]]; then
+    append_reality_block "$REALITY_DOMAIN_V6" "$FALLBACK_ORIGIN_V6" "$FALLBACK_HOST_V6"
+  fi
   echo "}"
 } >> "$tmp_nginx"
+
+dedupe_nginx_server_blocks "$tmp_nginx"
+
 cat "$tmp_nginx" > "$NGINX_CONF"
 rm -f "$tmp_nginx"
 info "已写入 IPv4 / IPv6 Reality 独立回落站"

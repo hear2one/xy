@@ -1,3 +1,9 @@
+# ==================================================
+# 无域名模式：写入 Xray 配置并测试
+# ==================================================
+
+info "写入 /usr/local/etc/xray/config.json ..."
+cat > /usr/local/etc/xray/config.json <<XRAYEOF
 {
     "log": {
         "loglevel": "info"
@@ -39,56 +45,12 @@
     "inbounds": [
         {
             "listen": "0.0.0.0",
-            "port": 443,
+            "port": ${XRAY_PORT},
             "protocol": "vless",
             "settings": {
                 "clients": [
                     {
-                        "id": "${UUID1}",
-                        "level": 0,
-                        "flow": "xtls-rprx-vision"
-                    }
-                ],
-                "decryption": "none",
-                "fallbacks": [
-                    {
-                        "dest": "8001",
-                        "xver": 0
-                    }
-                ]
-            },
-            "streamSettings": {
-                "network": "raw",
-                "security": "reality",
-                "realitySettings": {
-                    "show": false,
-                    "target": "8003",
-                    "xver": 0,
-                    "serverNames": [
-                        "${REALITY_DOMAIN}"
-                    ],
-                    "privateKey": "${PRIVATE_KEY}",
-                    "minClientVer": "1.8.2",
-                    "shortIds": [
-                        "${SHORT_ID}"
-                    ]
-                }
-            },
-            "sniffing": {
-                "enabled": true,
-                "destOverride": ["http", "tls", "quic"],
-                "metadataOnly": false,
-                "routeOnly": true
-            }
-        },
-        {
-            "listen": "127.0.0.1",
-            "port": 8001,
-            "protocol": "vless",
-            "settings": {
-                "clients": [
-                    {
-                        "id": "${UUID2}",
+                        "id": "${UUID}",
                         "level": 0
                     }
                 ],
@@ -96,10 +58,24 @@
             },
             "streamSettings": {
                 "network": "xhttp",
+                "security": "reality",
+                "realitySettings": {
+                    "show": false,
+                    "target": "${TARGET_HOST}:443",
+                    "xver": 0,
+                    "serverNames": [
+                        "${TARGET_HOST}"
+                    ],
+                    "privateKey": "${PRIVATE_KEY}",
+                    "minClientVer": "1.8.2",
+                    "shortIds": [
+                        "${SHORT_ID}"
+                    ]
+                },
                 "xhttpSettings": {
                     "host": "",
                     "path": "${XHTTP_PATH}",
-                    "mode": "auto"${XRAY_XHTTP_PADDING_JSON}
+                    "mode": "auto"
                 }
             },
             "sniffing": {
@@ -121,3 +97,12 @@
         }
     ]
 }
+XRAYEOF
+
+info "校验配置 (xray -test) ..."
+if ! /usr/local/bin/xray -test -config /usr/local/etc/xray/config.json; then
+  echo "---- config.json 内容 ----"
+  cat /usr/local/etc/xray/config.json
+  error "xray 配置测试未通过，请检查上方输出"
+fi
+echo ""

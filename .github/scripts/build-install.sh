@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 MODULES=(
+  00-uninstall.sh
   01-env.sh
   02-os-service.sh
   03-xray-install.sh

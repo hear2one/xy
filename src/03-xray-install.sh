@@ -11,11 +11,12 @@ install_xray() {
   fi
 
   if [[ "$OS_ID" != "alpine" ]]; then
-    bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install -u root
+    # --beta: 安装最新版本（含 pre-release）
+    bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install --beta -u root
     return
   fi
 
-  local arch asset tmpdir
+  local arch asset tmpdir tag
   arch=$(uname -m)
   case "$arch" in
     x86_64|amd64) asset="Xray-linux-64.zip" ;;
@@ -25,7 +26,12 @@ install_xray() {
 
   command -v unzip >/dev/null 2>&1 || pkg_install unzip
   tmpdir=$(mktemp -d)
-  curl -fL "https://github.com/XTLS/Xray-core/releases/latest/download/${asset}" -o "${tmpdir}/xray.zip"
+  # 取最新 release tag（含 pre-release，按发布时间倒序第一个）
+  tag=$(curl -fsSL --retry 3 --retry-delay 5 "https://api.github.com/repos/XTLS/Xray-core/releases" \
+    | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)
+  [[ -n "$tag" ]] || error "获取 Xray 最新版本失败（含 pre-release）"
+  info "安装 Xray ${tag}"
+  curl -fL "https://github.com/XTLS/Xray-core/releases/download/${tag}/${asset}" -o "${tmpdir}/xray.zip"
   unzip -q "${tmpdir}/xray.zip" -d "$tmpdir"
 
   mkdir -p /usr/local/bin /usr/local/etc/xray /usr/local/share/xray /var/log/xray
