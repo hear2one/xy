@@ -9,6 +9,7 @@ cp "$XRAY_CONF" "${XRAY_CONF}.bak-xhttp-reality"
 info "写入借证书直连入站 (端口 ${XRAY_PORT}) ..."
 env XRAY_PORT="$XRAY_PORT" TARGET_HOST="$TARGET_HOST" UUID3="$UUID3" \
   PRIVATE_KEY3="$PRIVATE_KEY3" SHORT_ID3="$SHORT_ID3" XHTTP_PATH="$XHTTP_PATH" \
+  VLESSENC_DECRYPTION="$VLESSENC_DECRYPTION" \
   python3 - "$XRAY_CONF" <<'PYEOF'
 import json, os, sys
 
@@ -18,15 +19,10 @@ target = os.environ["TARGET_HOST"]
 
 cfg = json.load(open(conf_path))
 
-# 与主部署同款 VLESS Encryption：decryption 从现有 xhttp 入站读取（8001 同源密钥对）
-decryption = "none"
-for ib in cfg.get("inbounds", []):
-    d = (ib.get("settings") or {}).get("decryption") or ""
-    if d and d != "none":
-        decryption = d
-        break
-if decryption == "none":
-    sys.exit("未找到主部署 VLESS Encryption decryption，无法为新入站启用 vlessenc")
+# 独立 VLESS Encryption：使用本节点单独生成的 decryption（与主部署 8001 隔离）
+decryption = os.environ.get("VLESSENC_DECRYPTION", "") or ""
+if not decryption or decryption == "none":
+    sys.exit("缺少独立 VLESS Encryption decryption（生成步骤失败或状态文件过期），请删除状态文件重跑")
 
 new_inbound = {
     "listen": "0.0.0.0",
@@ -91,7 +87,7 @@ if ! xray -test -config "$XRAY_CONF"; then
 fi
 rm -f "${XRAY_CONF}.bak-xhttp-reality"
 
-# 状态文件：重复运行直接重建，不改参数
+# 状态文件：重复运行直接重建，不改参数（含独立 vlessenc 密钥对，重建时复用保证配对）
 {
   printf 'XRAY_PORT=%q\n' "$XRAY_PORT"
   printf 'TARGET_HOST=%q\n' "$TARGET_HOST"
@@ -100,6 +96,8 @@ rm -f "${XRAY_CONF}.bak-xhttp-reality"
   printf 'PUBLIC_KEY3=%q\n' "$PUBLIC_KEY3"
   printf 'SHORT_ID3=%q\n' "$SHORT_ID3"
   printf 'XHTTP_PATH=%q\n' "$XHTTP_PATH"
+  printf 'VLESSENC_ENCRYPTION=%q\n' "$VLESSENC_ENCRYPTION"
+  printf 'VLESSENC_DECRYPTION=%q\n' "$VLESSENC_DECRYPTION"
 } > "$STATE_FILE"
 chmod 600 "$STATE_FILE"
 

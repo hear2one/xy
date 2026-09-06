@@ -5,7 +5,7 @@
 NODE_NAME="xhttp+Reality 借证书直连"
 NODE_TAG_ENC="xhttp%2BReality%20%E5%80%9F%E8%AF%81%E4%B9%A6%E7%9B%B4%E8%BF%9E"
 
-# VLESS Encryption：与主部署同款（encryption 参数从主节点链接解析，服务端已配同源 decryption）
+# VLESS Encryption：本节点独立密钥对的 encryption（服务端 02 已配同源 decryption，与主部署隔离）
 NODE_URI="vless://${UUID3}@$(format_uri_host "$BASE_SERVER"):${XRAY_PORT}?encryption=${VLESSENC_ENCRYPTION}&security=reality&sni=${TARGET_HOST}&fp=chrome&pbk=${PUBLIC_KEY3}&sid=${SHORT_ID3}&type=xhttp&path=${XHTTP_PATH}&mode=auto#${NODE_TAG_ENC}"
 
 # ---- v2rayn (client-config.txt)：按 tag 去重后追加 ----

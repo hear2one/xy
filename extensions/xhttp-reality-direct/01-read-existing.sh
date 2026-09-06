@@ -24,7 +24,6 @@ BASE_LINE=$(grep -F '#xhttp%2BReality%20%E4%B8%8A%E4%B8%8B%E8%A1%8C%E4%B8%8D%E5%
 BASE_SERVER=$(strip_ipv6_brackets "$(extract_uri_server "$BASE_LINE")")
 XHTTP_PATH=$(get_query_param "$BASE_LINE" "path" || true)
 REALITY_DOMAIN=$(get_query_param "$BASE_LINE" "sni" || true)
-VLESSENC_ENCRYPTION=$(get_query_param "$BASE_LINE" "encryption" || true)
 
 CDN_LINE=$(grep -F '#xhttp%2BTLS%2BH2' "$V2RAYN_FILE" | head -n1 | tr -d '\r' || true)
 DEFAULT_CDN_DOMAIN=""
@@ -36,7 +35,6 @@ fi
 [[ -n "$BASE_SERVER" ]] || error "读取 VPS 地址失败"
 [[ -n "$XHTTP_PATH" ]] || error "读取 XHTTP Path 失败"
 [[ -n "$REALITY_DOMAIN" ]] || error "读取 Reality 域名失败"
-[[ -n "$VLESSENC_ENCRYPTION" ]] || error "读取 VLESS Encryption 失败（主部署 xhttp 节点未启用？）"
 
 [[ -f "$XRAY_CONF" ]] || error "未找到 $XRAY_CONF，请先运行主脚本"
 command -v python3 >/dev/null 2>&1 || error "未找到 python3，请先安装（apt install python3 / apk add python3）"
@@ -47,6 +45,8 @@ install -d -m 700 /etc/xhttp-cdn
 if [[ -f "$STATE_FILE" ]]; then
   # shellcheck disable=SC1090
   . "$STATE_FILE"
+  # 旧版本状态文件不含独立 vlessenc 密钥对 → 提示删除重建
+  [[ -n "${VLESSENC_ENCRYPTION:-}" && -n "${VLESSENC_DECRYPTION:-}" ]] || error "状态文件缺少独立 VLESS Encryption 密钥对（旧版本生成），删除 $STATE_FILE 后重跑可重新生成"
   info "检测到已添加过借证书直连节点（$(basename "$STATE_FILE")），使用原参数重建："
   info "端口 $XRAY_PORT / 借用 $TARGET_HOST / UUID ${UUID3:0:8}..."
 else
@@ -87,13 +87,23 @@ PYEOF
     [[ "${REPLY,,}" == "y" ]] || error "已取消，请换一个站点重跑"
   fi
 
-  # 生成独立参数（与主部署的 reality 密钥/UUID 完全隔离）
+  # 生成独立参数（与主部署的 reality 密钥/UUID/vlessenc 完全隔离）
   UUID3=$(xray uuid)
   KEY_OUTPUT3=$(xray x25519 2>&1)
   PRIVATE_KEY3=$(echo "$KEY_OUTPUT3" | awk 'tolower($0) ~ /private/ { print $NF; exit }')
   PUBLIC_KEY3=$(echo "$KEY_OUTPUT3"  | awk 'tolower($0) ~ /public/  { print $NF; exit }')
   [[ -z "$UUID3" || -z "$PRIVATE_KEY3" || -z "$PUBLIC_KEY3" ]] && error "生成 UUID / x25519 密钥失败"
   SHORT_ID3=$(echo "$UUID3" | tr -d '-' | cut -c1-8)
+
+  # 独立 VLESS Encryption 密钥对（与主部署 8001 隔离：一份客户端配置泄露只影响本节点）
+  info "生成独立 VLESS Encryption 密钥对（xray vlessenc，与主部署隔离）..."
+  if ! VLESSENC_OUTPUT=$(xray vlessenc 2>&1) || ! grep -qi "encryption" <<< "$VLESSENC_OUTPUT"; then
+    error "VLESS Encryption 密钥生成失败，请确保 Xray 版本支持 vlessenc。输出: $VLESSENC_OUTPUT"
+  fi
+  VLESSENC_ENCRYPTION=$(echo "$VLESSENC_OUTPUT" | awk -F'"' '/ML-KEM/{found=1} found && /"encryption"/{print $4; exit}')
+  VLESSENC_DECRYPTION=$(echo "$VLESSENC_OUTPUT" | awk -F'"' '/ML-KEM/{found=1} found && /"decryption"/{print $4; exit}')
+  [[ -z "$VLESSENC_ENCRYPTION" ]] && error "未能提取 VLESS Encryption Key，xray vlessenc 输出: $VLESSENC_OUTPUT"
+  [[ -z "$VLESSENC_DECRYPTION" ]] && error "未能提取 VLESS Decryption Key，xray vlessenc 输出: $VLESSENC_OUTPUT"
 
   info "校验借用站点 ${TARGET_HOST}（xray tls ping，需支持 TLS 1.3 且可达）..."
   if ! PING_OUTPUT=$(xray tls ping "$TARGET_HOST" 2>&1); then
@@ -109,5 +119,5 @@ info "XHTTP Path:  $XHTTP_PATH"
 info "端口:        $XRAY_PORT"
 info "借用站点:    $TARGET_HOST"
 info "新 UUID:     ${UUID3:0:8}... (新 reality 密钥对已隔离生成)"
-info "VLESS Enc:   与主部署同款（防中间人解密，decryption 从主 8001 入站读取）"
+info "VLESS Enc:   独立生成（与主部署 8001 隔离，同款 xray vlessenc）"
 echo ""
