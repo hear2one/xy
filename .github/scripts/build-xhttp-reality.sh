@@ -33,6 +33,7 @@ append_with_includes() {
 }
 
 OUT_FILE="${OUT_DIR:-$ROOT_DIR/dist}/install-xhttp-reality.sh"
+mkdir -p "$(dirname "$OUT_FILE")"
 
 cat > "$OUT_FILE" <<'SCRIPTHEADER'
 #!/bin/bash

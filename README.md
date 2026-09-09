@@ -10,7 +10,23 @@
 > **注意**：V2rayN v7.19.5+版本 TUN 模式下链路不稳定，可能需要启用旧版TUN保护选项。
 > PR：https://github.com/2dust/v2rayN/pull/9005
 
-## 模式
+## 本地构建与检查
+
+修改 `src/`、`extensions/` 或 `templates/` 后，在 Bash 环境执行：
+
+```bash
+bash .github/scripts/check.sh
+```
+
+检查会在临时目录构建全部 8 个安装脚本，检查 Bash 语法和模板展开，并运行输入校验及 geodata 更新回归测试；不会安装服务。生成用于分发的 `dist/` 文件：
+
+```bash
+for builder in .github/scripts/build-*.sh; do bash "$builder"; done
+```
+
+审查结果和验证边界见 [代码审查记录](./docs/代码审查记录.md)。
+
+## 部署模式
 
 仓库文档用于搭建包含以下 5 种模式：
 

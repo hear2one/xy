@@ -1,3 +1,4 @@
+@@include src/common/input-validation.sh
 # ==================================================
 # 初始化说明与交互参数
 # ==================================================
@@ -26,25 +27,21 @@ echo ""
 
 read -rp "请输入 Reality 域名 (如 reality.example.com): " REALITY_DOMAIN
 [[ -z "$REALITY_DOMAIN" ]] && error "域名不能为空"
-[[ "$REALITY_DOMAIN" =~ ^[A-Za-z0-9.-]+$ && "$REALITY_DOMAIN" != "." && "$REALITY_DOMAIN" != ".." ]] || error "Reality 域名格式无效"
+validate_domain "$REALITY_DOMAIN" || error "Reality 域名格式无效"
 
 read -rp "请输入 CDN 域名 (如 cdn.example.com): " CDN_DOMAIN
 [[ -z "$CDN_DOMAIN" ]] && error "域名不能为空"
-[[ "$CDN_DOMAIN" =~ ^[A-Za-z0-9.-]+$ && "$CDN_DOMAIN" != "." && "$CDN_DOMAIN" != ".." ]] || error "CDN 域名格式无效"
-[[ "$REALITY_DOMAIN" != "$CDN_DOMAIN" ]] || error "Reality 域名和 CDN 域名不能相同"
+validate_domain "$CDN_DOMAIN" || error "CDN 域名格式无效"
+[[ "${REALITY_DOMAIN,,}" != "${CDN_DOMAIN,,}" ]] || error "Reality 域名和 CDN 域名不能相同"
 
 echo ""
 echo "  1) IPv4"
 echo "  2) IPv6"
 read -rp "请选择 IP 类型 [1/2] (默认 1): " IP_CHOICE
 IP_CHOICE=${IP_CHOICE:-1}
+[[ "$IP_CHOICE" == 1 || "$IP_CHOICE" == 2 ]] || error "IP 类型只能选择 1 或 2"
 
-normalize_proxy_origin() {
-  local url="$1"
-  [[ "$url" =~ ^https?:// ]] || url="https://${url}"
-  [[ "$url" =~ ^(https?)://([^/?#]+) ]] || return 1
-  printf '%s://%s' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
-}
+
 
 echo ""
 echo -e "${YELLOW}[+] 主动探测回落方式${NC}"
@@ -105,8 +102,10 @@ if [[ "$FEATURE_XPADDING" == true ]]; then
   echo -e "${YELLOW}[+] xpadding 自定义填充${NC}"
   read -rp "请输入 xpadding Header 名 [默认 Referer]: " XHTTP_PADDING_HEADER
   XHTTP_PADDING_HEADER=${XHTTP_PADDING_HEADER:-Referer}
+[[ "$XHTTP_PADDING_HEADER" =~ ^[A-Za-z0-9_-]+$ ]] || error "xpadding Header 仅支持字母、数字、下划线和连字符"
   read -rp "请输入 xpadding 参数名 [默认 x_padding]: " XHTTP_PADDING_KEY
   XHTTP_PADDING_KEY=${XHTTP_PADDING_KEY:-x_padding}
+[[ "$XHTTP_PADDING_KEY" =~ ^[A-Za-z0-9_-]+$ ]] || error "xpadding 参数名仅支持字母、数字、下划线和连字符"
 fi
 
 if [[ "$FEATURE_CDN_ECH" == true ]]; then

@@ -75,27 +75,37 @@ TAG=$(curl -fsSL --retry 3 --retry-delay 5 "https://api.github.com/repos/XTLS/Xr
 BASE="https://github.com/XTLS/Xray-core/releases/download/${TAG}"
 for f in geoip.dat geosite.dat; do
   curl -fsSL --retry 3 --retry-delay 5 "${BASE}/${f}" -o "${TMP_DIR}/${f}"
-  # zip 魔数 PK\x03\x04 + 非空校验
-  [[ "$(head -c 2 "${TMP_DIR}/${f}")" == "PK" ]] || { echo "geodata update: ${f} 文件头校验失败"; exit 1; }
+  # geodata 是 Protobuf，不是 ZIP；由 Xray 验证实际配置引用的数据。
   [[ -s "${TMP_DIR}/${f}" ]] || { echo "geodata update: ${f} 文件为空"; exit 1; }
 done
 
-cp /usr/local/share/xray/geoip.dat  /usr/local/share/xray/geoip.dat.old  2>/dev/null || true
-cp /usr/local/share/xray/geosite.dat /usr/local/share/xray/geosite.dat.old 2>/dev/null || true
+XRAY_LOCATION_ASSET="$TMP_DIR" xray -test -config /usr/local/etc/xray/config.json
+
+# 两份备份都成功后才能替换，避免使用上次遗留的 .old 文件回滚。
+cp /usr/local/share/xray/geoip.dat "${TMP_DIR}/geoip.dat.old"
+cp /usr/local/share/xray/geosite.dat "${TMP_DIR}/geosite.dat.old"
+restart_xray() {
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl restart xray
+  else
+    rc-service xray restart
+  fi
+}
+rollback_geodata() {
+  local status=$?
+  trap - ERR
+  install -m 644 "${TMP_DIR}/geoip.dat.old" /usr/local/share/xray/geoip.dat
+  install -m 644 "${TMP_DIR}/geosite.dat.old" /usr/local/share/xray/geosite.dat
+  restart_xray || echo "geodata update: 旧数据已恢复，但 Xray 重启失败" >&2
+  echo "geodata update: 更新失败，已恢复旧 geodata" >&2
+  exit "$status"
+}
+trap rollback_geodata ERR
 install -m 644 "${TMP_DIR}/geoip.dat"  /usr/local/share/xray/geoip.dat
 install -m 644 "${TMP_DIR}/geosite.dat" /usr/local/share/xray/geosite.dat
 
-if command -v systemctl >/dev/null 2>&1; then
-  if ! systemctl restart xray; then
-    mv -f /usr/local/share/xray/geoip.dat.old  /usr/local/share/xray/geoip.dat  2>/dev/null || true
-    mv -f /usr/local/share/xray/geosite.dat.old /usr/local/share/xray/geosite.dat 2>/dev/null || true
-    systemctl restart xray || true
-    echo "geodata update: xray 重启失败，已回滚旧 geodata"
-    exit 1
-  fi
-else
-  rc-service xray restart || { echo "geodata update: xray 重启失败"; exit 1; }
-fi
+restart_xray || rollback_geodata
+trap - ERR
 
 echo "geodata 已更新至 ${TAG} (geoip.dat + geosite.dat)"
 UPDATEREOF

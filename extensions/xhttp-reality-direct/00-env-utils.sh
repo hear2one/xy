@@ -121,13 +121,7 @@ extract_uri_server() {
   printf '%s' "${server%:443}"
 }
 
-normalize_proxy_origin() {
-  local url="$1"
-
-  [[ "$url" =~ ^https?:// ]] || url="https://${url}"
-  [[ "$url" =~ ^(https?)://([^/?#]+) ]] || return 1
-  printf '%s://%s' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
-}
+@@include src/common/input-validation.sh
 
 strip_ipv6_brackets() {
   local value="$1"
