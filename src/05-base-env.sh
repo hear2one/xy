@@ -73,6 +73,29 @@ EOF
 )
 fi
 
+if [[ "$XRAY_FINALMASK_ENABLED" == true ]]; then
+  XRAY_FINALMASK_JSON=$(cat <<EOF
+,
+                "finalmask": {
+                    "udp": [
+                        {
+                            "type": "noise",
+                            "settings": {
+                                "noise": [
+                                    {
+                                        "rand": "64-128",
+                                        "randRange": "0-255",
+                                        "delay": "10-20"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+EOF
+)
+fi
+
 if [[ "$CDN_ECH_ENABLED" == true ]]; then
   CDN_ECH_QUERY_ENC=$(echo "$CDN_ECH_QUERY" | sed -e 's/%/%25/g' -e 's/+/%2B/g' -e 's/:/%3A/g' -e 's/\//%2F/g')
 fi

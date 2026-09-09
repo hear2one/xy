@@ -60,3 +60,11 @@ fi
 
 echo -e "${YELLOW}[+] Cloudflare 缓存绕过表达式${NC}"
 echo "  (http.host eq \"${CDN_DOMAIN}\") or (http.request.uri.path contains \"${XHTTP_PATH}\")"
+
+if [[ "$FEATURE_FINALMASK" == true ]]; then
+  if [[ "$XRAY_FINALMASK_ENABLED" == true ]]; then
+    echo "服务端 FinalMask: 已开启"
+  else
+    echo "服务端 FinalMask: 未开启"
+  fi
+fi

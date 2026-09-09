@@ -2,20 +2,30 @@
     "log": {
         "loglevel": "info"
     },
+    "dns": {
+        "servers": [
+            {
+                "address": "fakedns",
+                "domains": [
+                    "all"
+                ]
+            }
+        ]
+    },
     "routing": {
         "domainStrategy": "IPIfNonMatch",
         "rules": [
             {
                 "type": "field",
-                "protocol": [
-                    "bittorrent"
+                "ip": [
+                    "198.18.0.0/15"
                 ],
-                "outboundTag": "block"
+                "outboundTag": "direct"
             },
             {
                 "type": "field",
-                "domain": [
-                    "geosite:category-ads-all"
+                "protocol": [
+                    "bittorrent"
                 ],
                 "outboundTag": "block"
             },
@@ -29,7 +39,13 @@
             {
                 "type": "field",
                 "ip": [
-                    "geoip:cn",
+                    "geoip:cn"
+                ],
+                "outboundTag": "block"
+            },
+            {
+                "type": "field",
+                "ip": [
                     "geoip:private"
                 ],
                 "outboundTag": "block"
@@ -68,7 +84,6 @@
                         "${REALITY_DOMAIN}"
                     ],
                     "privateKey": "${PRIVATE_KEY}",
-                    "minClientVer": "1.8.2",
                     "shortIds": [
                         "${SHORT_ID}"
                     ]
@@ -76,7 +91,7 @@
             },
             "sniffing": {
                 "enabled": true,
-                "destOverride": ["http", "tls", "quic"],
+                "destOverride": ["fakedns", "http", "tls", "quic"],
                 "metadataOnly": false,
                 "routeOnly": true
             }
@@ -100,11 +115,11 @@
                     "host": "",
                     "path": "${XHTTP_PATH}",
                     "mode": "auto"${XRAY_XHTTP_PADDING_JSON}
-                }
+                }${XRAY_FINALMASK_JSON}
             },
             "sniffing": {
                 "enabled": true,
-                "destOverride": ["http", "tls", "quic"],
+                "destOverride": ["fakedns", "http", "tls", "quic"],
                 "metadataOnly": false,
                 "routeOnly": true
             }
@@ -113,7 +128,10 @@
     "outbounds": [
         {
             "protocol": "freedom",
-            "tag": "direct"
+            "tag": "direct",
+            "settings": {
+                "domainStrategy": "UseIPv4"
+            }
         },
         {
             "protocol": "blackhole",

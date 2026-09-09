@@ -157,3 +157,27 @@ else
   info "Geodata 自动更新: 未开启"
 fi
 echo ""
+
+if [[ "$FEATURE_FINALMASK" == true ]]; then
+  echo "  - FinalMask 高级伪装默认关闭，可按需启用"
+fi
+
+if [[ "$FEATURE_FINALMASK" == true ]]; then
+  echo ""
+  echo -e "${YELLOW}[+] 服务端 FinalMask 高级伪装${NC}"
+  echo "默认关闭。启用后只写入服务端 XHTTP 入站的 streamSettings.finalmask，不会修改客户端 extra/fm。"
+  read -rp "是否启用服务端 FinalMask [y/N]: "
+  if [[ "${REPLY,,}" == "y" ]]; then
+    XRAY_FINALMASK_ENABLED=true
+  else
+    XRAY_FINALMASK_ENABLED=false
+  fi
+fi
+
+if [[ "$FEATURE_FINALMASK" == true ]]; then
+  if [[ "$XRAY_FINALMASK_ENABLED" == true ]]; then
+    info "服务端 FinalMask: 已开启"
+  else
+    info "服务端 FinalMask: 未开启"
+  fi
+fi

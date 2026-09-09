@@ -44,6 +44,12 @@ for builder in .github/scripts/build-*.sh; do bash "$builder"; done
 - 配置 `xpadding` 以绕过 CDN 的潜在检测
 - 配置 `ECH` 以加密 TLS 握手时的 SNI
 
+- 服务端默认启用严格“不允许回国”策略：`geosite:cn` 阻断国内域名/URL，`geoip:cn` 阻断国内 IP，`bittorrent` 与私网地址同样阻断
+- 服务端启用 FakeDNS，`198.18.0.0/15 -> direct` 规则固定排在最前，避免 FakeDNS 被后续阻断规则误伤
+- 服务端 FinalMask 作为高级开关提供，默认关闭；启用后只写入 XHTTP 入站的 `streamSettings.finalmask`
+
+> **注意**：这是严格禁止回国模式，不是国内直连/分流优化。客户端 `XHTTP Extra` / `Finalmask` 不建议手动填写，除非你明确知道当前客户端内核支持对应字段。FinalMask 服务端开关默认关闭，先确保基础 CDN/XHTTP 链路可通后再测试。
+
 ## 流程图（去程 + 回程）
 
 客户端与服务器连接流程图请看：[流程图.md](./docs/5.流程图.md)
@@ -87,7 +93,7 @@ for builder in .github/scripts/build-*.sh; do bash "$builder"; done
 
 ```bash
 sudo -i
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/install.sh -o ~/install.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install.sh -o ~/install.sh
 bash ~/install.sh
 ```
 
@@ -96,7 +102,7 @@ Alpine Linux：
 ```sh
 doas -s
 apk add --no-cache bash curl
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/install.sh -o ~/install.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install.sh -o ~/install.sh
 bash ~/install.sh
 ```
 
@@ -109,7 +115,7 @@ bash ~/install.sh
 
 ```bash
 sudo -i
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/install-xpadding.sh -o ~/install-xpadding.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install-xpadding.sh -o ~/install-xpadding.sh
 bash ~/install-xpadding.sh
 ```
 
@@ -118,7 +124,7 @@ Alpine Linux：
 ```sh
 doas -s
 apk add --no-cache bash curl
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/install-xpadding.sh -o ~/install-xpadding.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install-xpadding.sh -o ~/install-xpadding.sh
 bash ~/install-xpadding.sh
 ```
 
@@ -132,7 +138,7 @@ bash ~/install-xpadding.sh
 
 ```bash
 sudo -i
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/add-dual-cdn.sh -o ~/add-dual-cdn.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-dual-cdn.sh -o ~/add-dual-cdn.sh
 bash ~/add-dual-cdn.sh
 ```
 
@@ -141,7 +147,7 @@ Alpine Linux：
 ```sh
 doas -s
 apk add --no-cache bash curl
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/add-dual-cdn.sh -o ~/add-dual-cdn.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-dual-cdn.sh -o ~/add-dual-cdn.sh
 bash ~/add-dual-cdn.sh
 ```
 
@@ -153,7 +159,7 @@ bash ~/add-dual-cdn.sh
 
 ```bash
 sudo -i
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/add-dual-ip.sh -o ~/add-dual-ip.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-dual-ip.sh -o ~/add-dual-ip.sh
 bash ~/add-dual-ip.sh
 ```
 
@@ -163,7 +169,7 @@ Alpine Linux：
 
 doas -s
 apk add --no-cache bash curl
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/add-dual-ip.sh -o ~/add-dual-ip.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-dual-ip.sh -o ~/add-dual-ip.sh
 bash ~/add-dual-ip.sh
 ```
 
@@ -177,7 +183,7 @@ Debian / Ubuntu：
 
 ```bash
 sudo -i
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/add-quic.sh -o ~/add-quic.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-quic.sh -o ~/add-quic.sh
 bash ~/add-quic.sh
 ```
 
@@ -186,7 +192,7 @@ Alpine Linux：
 ```sh
 doas -s
 apk add --no-cache bash curl
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/add-quic.sh -o ~/add-quic.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-quic.sh -o ~/add-quic.sh
 bash ~/add-quic.sh
 ```
 
@@ -201,7 +207,7 @@ Debian / Ubuntu：
 
 ```bash
 sudo -i
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/add-hysteria2.sh -o ~/add-hysteria2.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-hysteria2.sh -o ~/add-hysteria2.sh
 bash ~/add-hysteria2.sh
 ```
 
@@ -210,7 +216,7 @@ Alpine Linux：
 ```sh
 doas -s
 apk add --no-cache bash curl
-curl -fsSL https://github.com/Yulinanami/my-xhttp-cdn-config/releases/latest/download/add-hysteria2.sh -o ~/add-hysteria2.sh
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-hysteria2.sh -o ~/add-hysteria2.sh
 bash ~/add-hysteria2.sh
 ```
 
