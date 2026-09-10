@@ -170,8 +170,8 @@ if [[ "${HY2_HOP_REPLY,,}" == "y" ]]; then
   fi
 else
   HY2_HOP_ENABLED=false
-  read -rp "请输入 Hysteria2 UDP 端口 [1-65535] (默认 8443): " HY2_PORT
-  HY2_PORT=${HY2_PORT:-8443}
+  read -rp "请输入 Hysteria2 UDP 端口 [1-65535] (默认 9443): " HY2_PORT
+  HY2_PORT=${HY2_PORT:-9443}
   if [[ ! "$HY2_PORT" =~ ^[0-9]+$ ]] ||
      (( HY2_PORT < 1 || HY2_PORT > 65535 )); then
     error "Hysteria2 UDP 端口无效，请输入 1-65535 的整数"
@@ -180,9 +180,30 @@ else
   HY2_HOP_INTERVAL=30
 fi
 
+# Even though Hysteria2 uses UDP, avoid reusing well-known service port
+# numbers so firewall/security-group rules and future protocol changes remain
+# unambiguous. Detect non-default SSH ports where possible.
+SSH_PORTS="22"
+DETECTED_SSH_PORTS=""
+if command -v sshd >/dev/null 2>&1; then
+  DETECTED_SSH_PORTS=$(sshd -T 2>/dev/null | awk '$1 == "port" { print $2 }' | sort -nu | tr '\n' ' ' || true)
+fi
+if [[ -z "$DETECTED_SSH_PORTS" && -f /etc/ssh/sshd_config ]]; then
+  DETECTED_SSH_PORTS=$(sed -nE 's/^[[:space:]]*Port[[:space:]]+([0-9]+).*/\1/pI' /etc/ssh/sshd_config | sort -nu | tr '\n' ' ' || true)
+fi
+[[ -n "$DETECTED_SSH_PORTS" ]] && SSH_PORTS="$DETECTED_SSH_PORTS"
+
+HY2_PORT_END=${HY2_PORT_END:-$HY2_PORT}
+for reserved_port in 80 443 8443 $SSH_PORTS; do
+  [[ "$reserved_port" =~ ^[0-9]+$ ]] || continue
+  if (( reserved_port >= HY2_PORT && reserved_port <= HY2_PORT_END )); then
+    error "Hysteria2 端口 ${HY2_PORT_SPEC} 包含保留端口 ${reserved_port}（SSH/HTTP/HTTPS/8443），请重新选择"
+  fi
+done
+
 if [[ -f /etc/nginx/nginx.conf ]]; then
   while IFS= read -r quic_port; do
-    if (( quic_port >= HY2_PORT && quic_port <= ${HY2_PORT_END:-$HY2_PORT} )); then
+    if (( quic_port >= HY2_PORT && quic_port <= HY2_PORT_END )); then
       error "UDP ${quic_port} 已被 XHTTP H3 使用，不能包含在 Hysteria2 端口范围 ${HY2_PORT_SPEC} 中"
     fi
   done < <(sed -nE 's/^[[:space:]]*listen[[:space:]]+([0-9]+)[[:space:]]+quic([[:space:]]|;).*/\1/p' /etc/nginx/nginx.conf)

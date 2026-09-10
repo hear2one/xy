@@ -57,5 +57,7 @@ run_client_case false 20000
 
 grep -Fq 'listen: :${HY2_PORT_SPEC}' "$ROOT_DIR/extensions/hysteria2/02-server-config.sh"
 grep -Fq "'2.8.0'" "$ROOT_DIR/extensions/hysteria2/02-server-config.sh"
+grep -Fq 'for reserved_port in 80 443 8443 $SSH_PORTS' "$ROOT_DIR/extensions/hysteria2/01-read-existing.sh"
+grep -Fq 'HY2_PORT=${HY2_PORT:-9443}' "$ROOT_DIR/extensions/hysteria2/01-read-existing.sh"
 
 echo 'Hysteria2 fixed-port and port-hopping output tests passed.'
