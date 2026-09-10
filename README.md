@@ -194,6 +194,8 @@ bash .github/scripts/check.sh
 
 检查会重新构建全部 8 个安装脚本，执行 Bash 语法与模板检查，确认 [`dist/`](./dist/) 与源码生成结果逐字节一致，并运行输入校验和 geodata 更新回归测试。
 
+CI 还会校验生成目录、提交目录和 README 使用同一份 8 文件发布清单，防止新增功能时漏交 `dist`、下载命令或 Release 附件。
+
 提交 `main` 只更新仓库代码。推送新的 `v*` 标签后，[Release 工作流](./.github/workflows/release.yml) 才会构建、校验并把 8 个脚本发布到 GitHub Release。
 
 ## 参考资料

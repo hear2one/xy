@@ -44,26 +44,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: installers
-          path: |
-            dist/install.sh
-            dist/install-xpadding.sh
-            dist/add-dual-cdn.sh
-            dist/add-dual-ip.sh
-            dist/add-quic.sh
-            dist/add-hysteria2.sh
-            dist/install-xhttp-reality.sh
-            dist/add-xhttp-reality.sh
+          path: dist/*.sh
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            dist/install.sh
-            dist/install-xpadding.sh
-            dist/add-dual-cdn.sh
-            dist/add-dual-ip.sh
-            dist/add-quic.sh
-            dist/add-hysteria2.sh
-            dist/install-xhttp-reality.sh
-            dist/add-xhttp-reality.sh
+          generate_release_notes: true
+          files: dist/*.sh
