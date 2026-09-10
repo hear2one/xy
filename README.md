@@ -1,311 +1,208 @@
-# XHTTP + CDN 上下行分离配置指南
+# XHTTP + CDN / Reality 一键部署
 
-> **强烈建议**：关于XHTTP的原理，上下行分离，以及带来的抗审查优势：https://habr.com/en/articles/990208/
+本仓库提供基于 Xray-core 的 VLESS XHTTP 部署脚本，支持 CDN 与 Reality 上下行分离、xpadding、ECH、H2/H3、双 CDN、双栈、Hysteria2，以及无需自有域名的 XHTTP + Reality 直连模式。
 
-这个仓库用于整理一套443端口上基于 Xray-core 的 XHTTP + CDN 搭建方案，覆盖环境准备、服务端配置和客户端模板三部分内容。
-支持小火箭、Xray和Mihomo客户端，支持IPv4和IPv6。
+客户端输出支持 V2RayN、Shadowrocket 和 Mihomo。主脚本支持 Debian、Ubuntu、CentOS、RHEL、AlmaLinux、Rocky Linux、Oracle Linux、Amazon Linux、Fedora、openSUSE、SLES 与 Alpine Linux；推荐 Ubuntu 24.04、Debian 12 或 Alpine Linux。
 
-> **注意**：教程使用 VLESS Encryption，客户端（V2rayN、Mihomo客户端）也需要更新到支持 vlessenc / xhttp 的版本。
->
-> **注意**：V2rayN v7.19.5+版本 TUN 模式下链路不稳定，可能需要启用旧版TUN保护选项。
-> PR：https://github.com/2dust/v2rayN/pull/9005
+> 客户端和服务端 Xray 内核必须支持 VLESS Encryption 与 XHTTP。xpadding 版建议使用 Xray `26.2.6` 或更高版本，Mihomo `1.19.24` 或更高版本。
 
-## 本地构建与检查
+## 功能概览
 
-修改 `src/`、`extensions/` 或 `templates/` 后，在 Bash 环境执行：
-
-```bash
-bash .github/scripts/check.sh
-```
-
-检查会在临时目录构建全部 8 个安装脚本，检查 Bash 语法、模板展开，并确认生成结果与仓库中的 `dist/` 完全一致；随后运行输入校验及 geodata 更新回归测试，不会安装服务。更新提交到仓库的 `dist/` 文件：
-
-```bash
-for builder in .github/scripts/build-*.sh; do bash "$builder"; done
-```
-
-审查结果和验证边界见 [代码审查记录](./docs/代码审查记录.md)。
-
-### CDN 下行 IPv4 可选优化
-
-若客户端 IPv6 不可用且分离节点首次连接慢，可在新部署时使用
-`CDN_DOWNLOAD_IPV4=true bash ./install-xpadding.sh`（普通版 `install.sh` 同样支持）。
-默认关闭。开启后，仅 V2RayN/Xray 分享链接中的“上行 Reality、下行 TLS+CDN”节点增加
-`downloadSettings.sockopt.domainStrategy: ForceIPv4`；保持域名、SNI、ECH 和认证参数不变。
-此选项不改变服务器出站策略，也不修改 Mihomo 配置及扩展脚本输出。
-
-已经部署的节点应直接修改客户端 Extra，不必重跑安装脚本，以免重新生成密钥。
-具体修改位置及实测结果见 [CDN 下行连接排查](./docs/CDN下行连接排查.md)。
-
-## 部署模式
-
-仓库文档用于搭建包含以下 5 种模式：
+主部署一次生成以下 5 类节点：
 
 1. Reality Vision 直连
-2. XHTTP + Reality 上下行不分离
+2. XHTTP + Reality，上下行不分离
 3. 上行 XHTTP + TLS + CDN，下行 XHTTP + Reality
 4. XHTTP + TLS + H2
 5. 上行 XHTTP + Reality，下行 XHTTP + TLS + CDN
 
-## 安全性
+此外提供：
 
-- VLESS Encryption：启用 VLESS Encryption，防止 CDN 中间人解密流量内容
-- 对 XHTTP 入站启用 vlessenc（因为只有它过 CDN），Vision 直连不需要
-- 主脚本可选择由 Nginx 反向代理回落网站，或直接返回用户上传的 `dist` 静态页面
-- 配置 `xpadding` 以绕过 CDN 的潜在检测
-- 配置 `ECH` 以加密 TLS 握手时的 SNI
+- 普通版和 xpadding + 可选 ECH 版主安装程序
+- 服务端 FinalMask 可选开关，默认关闭
+- 无需自有域名、证书或 CDN 的独立 XHTTP + Reality 安装程序
+- 为现有主部署追加独立端口 XHTTP + Reality 节点
+- 上下行不同 CDN、上行 IPv4/下行 IPv6、XHTTP H3/H2-H3、Hysteria2 扩展
+- V2RayN/Shadowrocket、Mihomo 完整配置与纯节点配置
+- HTTPS 订阅地址及订阅二维码
+- geoip/geosite 每周自动更新，替换前校验，失败时回滚
+- FakeDNS 与严格禁止回国策略
+- 安装脚本内置卸载入口
 
-- 服务端默认启用严格“不允许回国”策略：`geosite:cn` 阻断国内域名/URL，`geoip:cn` 阻断国内 IP，`bittorrent` 与私网地址同样阻断
-- 服务端启用 FakeDNS，`198.18.0.0/15 -> direct` 规则固定排在最前，避免 FakeDNS 被后续阻断规则误伤
-- 服务端 FinalMask 作为高级开关提供，默认关闭；启用后只写入 XHTTP 入站的 `streamSettings.finalmask`
+## 发布脚本
 
-> **注意**：这是严格禁止回国模式，不是国内直连/分流优化。客户端 `XHTTP Extra` / `Finalmask` 不建议手动填写，除非你明确知道当前客户端内核支持对应字段。FinalMask 服务端开关默认关闭，先确保基础 CDN/XHTTP 链路可通后再测试。
+GitHub Release 中的 8 个脚本与仓库 [`dist/`](./dist/) 内容一致：
 
-## 流程图（去程 + 回程）
+| 脚本 | 用途 | 使用前提 |
+| --- | --- | --- |
+| `install.sh` | 普通 XHTTP + CDN 主部署 | 自有 Reality 域名和 CDN 域名 |
+| `install-xpadding.sh` | xpadding 主部署，ECH 可选 | 同上，客户端内核支持 xpadding |
+| `install-xhttp-reality.sh` | 无域名单节点 XHTTP + Reality | 无需自有域名、证书或 CDN |
+| `add-xhttp-reality.sh` | 给现有主部署追加独立 Reality 节点 | 已运行主脚本，需放行新 TCP 端口 |
+| `add-dual-cdn.sh` | 上行 CDN-A、下行 CDN-B | 已运行主脚本 |
+| `add-dual-ip.sh` | 上行 IPv4、下行 IPv6 | VPS 同时具有 IPv4 和 IPv6 |
+| `add-quic.sh` | XHTTP H3、H2/H3 上下行分离 | 已运行主脚本，需放行 UDP 端口 |
+| `add-hysteria2.sh` | 追加 Hysteria2 节点 | 已运行主脚本，需放行 UDP 端口 |
 
-客户端与服务器连接流程图请看：[流程图.md](./docs/5.流程图.md)
+## 快速部署
 
-## 手动部署（以Ubuntu24.04为例）
+所有脚本均需 root 权限。Debian/Ubuntu 等系统可先执行 `sudo -i`；Alpine 可执行 `doas -s` 并安装：
 
-按下面的顺序阅读和执行：
+```sh
+apk add --no-cache bash curl
+```
 
-1. [环境配置.md](./docs/1.环境配置.md)，完成 Cloudflare 设置、Xray 安装、证书申请和 Nginx 安装。
-2. [文件配置.md](./docs/2.文件配置.md)，完成 Nginx 与 Xray 配置，并执行测试与重启命令。
-3. [xpadding配置.md](./docs/3.xpadding配置.md)，带 `xpadding` 的版本，按此文档补充 Xray / v2rayN / Mihomo 配置。
-4. [ECH配置.md](./docs/4.ECH配置.md)，给 CDN-TLS 节点启用 ECH，按此文档补充客户端配置。
-5. [拓展-上下行不同CDN.md](./docs/6.拓展-上下行不同CDN.md)，可选扩展：上行 CDN-A / 下行 CDN-B。
-6. [拓展-上下行IPv4IPv6.md](./docs/7.拓展-上下行IPv4IPv6.md)，可选扩展：上行 IPv4 / 下行 IPv6。
-7. [拓展-XHTTP-H3.md](./docs/8.拓展-XHTTP-H3.md)，可选扩展：XHTTP H3、H2/H3 上下行分离。
-8. [拓展-Hysteria2.md](./docs/9.拓展-Hysteria2.md)，可选扩展：Hysteria2。
-9. [卸载.md](./docs/9.卸载.md)，卸载指令，用于卸载前面搭建 Xray、Nginx、ACME 和 Hysteria2。
-10. [客户端模板.txt](./客户端模板.txt)，复制到 V2rayN，替换 `YOUR_*` 占位符后使用。
-11. [客户端模板-mihomo.yaml](./客户端模板-mihomo.yaml)，Mihomo内核客户端的配置文件，替换 `YOUR_*` 占位符后导入。
+### 有域名：普通版
 
----
+先在 Cloudflare 配置：
 
-## 一键部署
-
-> **提示**：脚本可以重新执行即可更新域名、回落网站等参数。
-> **前置条件**：运行脚本前需在 Cloudflare 完成以下设置：
->
-> 1. Reality 域名 DNS → 仅 DNS（灰色云朵）
-> 2. CDN 域名 DNS → 代理开启（橙色云朵）
-> 3. SSL/TLS 加密 → 完全（严格）
-> 4. 网络 → gRPC → 已开启
-> 5. 缓存规则（建议） → 将 XHTTP 路径设为绕过缓存，具体步骤请参考Github仓库的 [环境配置.md](./docs/1.环境配置.md)。
-
-将 `dist` 文件夹上传到 `/var/www/`，每个入口域名使用独立的 `/var/www/dist/<域名>/index.html`；可用 [SingleFile](https://chromewebstore.google.com/detail/singlefile/mpiodijhokgodhhofbcjdecpffjipkle?hl=zh-CN&utm_source=ext_sidebar) 抓取网页。
-
-在 VPS (Debian/Ubuntu) 上执行：
-
-### 普通 XHTTP + TLS + CDN
-
-> **注意**：需要 Mihomo 内核版本≥1.19.23。
+1. Reality 域名设为仅 DNS。
+2. CDN 域名开启代理。
+3. SSL/TLS 模式设为“完全（严格）”。
+4. 开启 gRPC。
+5. 为 XHTTP 路径创建绕过缓存规则。
 
 ```bash
-sudo -i
 curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install.sh -o ~/install.sh
 bash ~/install.sh
 ```
 
-Alpine Linux：
+### 有域名：xpadding 版
 
-```sh
-doas -s
-apk add --no-cache bash curl
-curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install.sh -o ~/install.sh
-bash ~/install.sh
-```
-
----
-
-### 带 xpadding 的 XHTTP（ECH 可选）
-
-> **提示**：xpadding 默认开启；ECH 可选，默认关闭
-> **注意**：需要 Xray 内核版本≥`26.2.6`，Mihomo 内核版本≥`1.19.24`。
+xpadding 默认启用，安装过程中可选择 ECH；FinalMask 默认关闭。
 
 ```bash
-sudo -i
 curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install-xpadding.sh -o ~/install-xpadding.sh
 bash ~/install-xpadding.sh
 ```
 
-Alpine Linux：
+### 无域名：XHTTP + Reality 单节点
 
-```sh
-doas -s
-apk add --no-cache bash curl
-curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install-xpadding.sh -o ~/install-xpadding.sh
-bash ~/install-xpadding.sh
-```
-
----
-
-### 扩展脚本
-
-主脚本部署完成后，可按需追加新模式；扩展脚本会复用已有 `UUID / Path / VLESS Encryption`，并更新客户端配置和订阅。
-
-#### 上行 CDN-A | 下行 CDN-B
+该模式借用支持 TLS 1.3 的第三方站点作为 Reality target，不安装 Nginx、不申请证书，也不使用 Cloudflare。
 
 ```bash
-sudo -i
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install-xhttp-reality.sh -o ~/install-xhttp-reality.sh
+bash ~/install-xhttp-reality.sh
+```
+
+请在 VPS 防火墙和云平台安全组放行所选 TCP 端口。
+
+## 扩展现有部署
+
+先成功运行 `install.sh` 或 `install-xpadding.sh`，再按需执行：
+
+```bash
+# 追加独立端口 XHTTP + Reality 节点
+curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-xhttp-reality.sh -o ~/add-xhttp-reality.sh
+bash ~/add-xhttp-reality.sh
+
+# 上行 CDN-A、下行 CDN-B
 curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-dual-cdn.sh -o ~/add-dual-cdn.sh
 bash ~/add-dual-cdn.sh
-```
 
-Alpine Linux：
-
-```sh
-doas -s
-apk add --no-cache bash curl
-curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-dual-cdn.sh -o ~/add-dual-cdn.sh
-bash ~/add-dual-cdn.sh
-```
-
-- 同步：`xpadding`；ECH 可选复用，默认关闭
-- 输入：`CDN-A / CDN-B`
-- 回落：每个新增 CDN 域名单独配置
-
-#### 上行 IPv4 | 下行 IPv6 (需要 vps 拥有 IPv4 和 IPv6)
-
-```bash
-sudo -i
+# 上行 IPv4、下行 IPv6
 curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-dual-ip.sh -o ~/add-dual-ip.sh
 bash ~/add-dual-ip.sh
-```
 
-Alpine Linux：
-
-```sh
-
-doas -s
-apk add --no-cache bash curl
-curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-dual-ip.sh -o ~/add-dual-ip.sh
-bash ~/add-dual-ip.sh
-```
-
-- 同步：`xpadding`
-- 输入：`IPv4 Reality 域名 / IPv6 Reality 域名`
-- 回落：每个新增 Reality 域名单独配置
-
-#### XHTTP H3 / H2-H3 上下行分离
-
-Debian / Ubuntu：
-
-```bash
-sudo -i
+# XHTTP H3 与 H2/H3 上下行分离
 curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-quic.sh -o ~/add-quic.sh
 bash ~/add-quic.sh
-```
 
-Alpine Linux：
-
-```sh
-doas -s
-apk add --no-cache bash curl
-curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-quic.sh -o ~/add-quic.sh
-bash ~/add-quic.sh
-```
-
-- 复用：已有 `xhttp+TLS+H2` 节点的域名、UUID、VLESS Encryption、XHTTP Path、xpadding；ECH 可选复用，默认关闭
-- 端口：输入 `1-65535`，默认 443，不能与 Hysteria2 相同
-- TLS：XHTTP H3 由 Nginx 处理
-- 节点：XHTTP H3、上行 H2/下行 H3、上行 H3/下行 H2
-
-#### Hysteria2
-
-Debian / Ubuntu：
-
-```bash
-sudo -i
+# Hysteria2
 curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-hysteria2.sh -o ~/add-hysteria2.sh
 bash ~/add-hysteria2.sh
 ```
 
-Alpine Linux：
+扩展脚本会读取现有配置，并更新客户端文件与 HTTPS 订阅。新增端口需要在系统防火墙和云平台安全组中放行；QUIC/Hysteria2 使用 UDP，追加 Reality 节点使用 TCP。
 
-```sh
-doas -s
-apk add --no-cache bash curl
-curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-hysteria2.sh -o ~/add-hysteria2.sh
-bash ~/add-hysteria2.sh
+## CDN 下行优先 IPv4
+
+客户端没有可用 IPv6，而 CDN 域名同时返回 A/AAAA 记录时，“上行 Reality、下行 TLS + CDN”节点可能首次连接缓慢或超时。新部署时可启用：
+
+```bash
+CDN_DOWNLOAD_IPV4=true bash ~/install-xpadding.sh
 ```
 
-- 端口：输入 `1-65535`，默认 8443，不能与 XHTTP H3 相同
-- 节点：Hysteria2 直连
+普通版 `install.sh` 同样支持。该选项只在 V2RayN/Xray 分享链接的 CDN 下行 `downloadSettings` 中加入 `sockopt.domainStrategy: ForceIPv4`；不会改变服务器出站、Mihomo 配置、域名、SNI、ECH 或认证参数。默认值为 `false`。
 
----
+已部署节点可直接编辑客户端 Extra，避免重跑脚本后重新生成密钥。实测与修改示例见 [CDN 下行连接排查](./docs/CDN下行连接排查.md)。
 
-### 输出文件
+## 回落页面与代理回落
 
-脚本会生成：
+主脚本会让你选择：
 
-- `~/client-config.txt`：V2RayN / Shadowrocket 节点
+- 静态页面：每个入口域名使用 `/var/www/dist/<域名>/index.html`。脚本可创建占位页，也可使用已有页面。
+- 反向代理：Reality 与 CDN 域名必须配置不同的 HTTPS 回落站点。
+
+服务器目录 `/var/www/dist` 保存伪装网页；仓库 [`dist/`](./dist/) 保存 GitHub Release 安装脚本，两者用途不同。
+
+## 输出文件
+
+主脚本与扩展会生成或更新：
+
+- `~/client-config.txt`：V2RayN / Shadowrocket 分享链接
 - `~/client-config-mihomo-full.yaml`：Mihomo 完整分流配置
 - `~/client-config-mihomo-nodes.yaml`：Mihomo 纯节点配置
-- `~/subscription-links.txt`：订阅链接汇总
-- `~/subscription-*.png`：订阅二维码
+- `~/subscription-links.txt`：三个 HTTPS 订阅地址
+- `~/subscription-v2rayn.png`
+- `~/subscription-mihomo-full.png`
+- `~/subscription-mihomo-nodes.png`
 
-已有 Mihomo 配置的用户，建议使用 `mihomo-nodes.yaml`。
-
----
-
-## 个人开发与发布
-
-修改模块或模板后，在仓库根目录运行代码以构建搭建脚本：
+## 卸载
 
 ```bash
-bash .github/scripts/build-install.sh
-bash .github/scripts/build-dual-cdn.sh
-bash .github/scripts/build-dual-ip.sh
-bash .github/scripts/build-quic.sh
-bash .github/scripts/build-hysteria2.sh
+bash ~/install.sh uninstall
 ```
 
-会在 `dist/` 目录生成：
+无需交互确认：
 
-- `install.sh`
-- `install-xpadding.sh`
-- `add-dual-cdn.sh`
-- `add-dual-ip.sh`
-- `add-quic.sh`
-- `add-hysteria2.sh`
+```bash
+bash ~/install.sh uninstall -y
+```
 
----
+卸载会移除本项目安装的 Xray、Nginx、Hysteria2、证书、配置、订阅和 geodata 更新任务；`/var/www/dist` 中的自定义回落页面会保留。详细清单见 [卸载说明](./docs/9.卸载.md)。
+
+## 安全与路由行为
+
+- CDN XHTTP 入站启用 VLESS Encryption，避免 CDN 中间节点读取代理流量内容。
+- FakeDNS 地址段 `198.18.0.0/15` 的直连规则固定在阻断规则之前。
+- 默认阻断 `geosite:cn`、`geoip:cn`、私网地址与 BitTorrent。这是严格禁止回国策略，并非国内直连分流。
+- FinalMask 仅写入服务端 XHTTP 入站的 `streamSettings.finalmask`，默认关闭；客户端无需手工添加 `fm`。
+- ECH 只作用于 CDN TLS 链路，默认关闭。
+
+## 文档
+
+- [环境与 Cloudflare 配置](./docs/1.环境配置.md)
+- [手动文件配置](./docs/2.文件配置.md)
+- [xpadding 配置](./docs/3.xpadding配置.md)
+- [ECH 配置](./docs/4.ECH配置.md)
+- [链路流程图](./docs/5.流程图.md)
+- [双 CDN 扩展](./docs/6.拓展-上下行不同CDN.md)
+- [IPv4/IPv6 扩展](./docs/7.拓展-上下行IPv4IPv6.md)
+- [XHTTP H3 扩展](./docs/8.拓展-XHTTP-H3.md)
+- [Hysteria2 扩展](./docs/9.拓展-Hysteria2.md)
+- [代码审查记录](./docs/代码审查记录.md)
+
+## 开发、检查与发布
+
+修改 `src/`、`extensions/` 或 `templates/` 后，在 Bash 环境运行：
+
+```bash
+for builder in .github/scripts/build-*.sh; do bash "$builder"; done
+bash .github/scripts/check.sh
+```
+
+检查会重新构建全部 8 个安装脚本，执行 Bash 语法与模板检查，确认 [`dist/`](./dist/) 与源码生成结果逐字节一致，并运行输入校验和 geodata 更新回归测试。
+
+提交 `main` 只更新仓库代码。推送新的 `v*` 标签后，[Release 工作流](./.github/workflows/release.yml) 才会构建、校验并把 8 个脚本发布到 GitHub Release。
 
 ## 参考资料
 
-### Xray-xhttp
-
-- Xray 小白搭建教程：[https://xtls.github.io/document/level-0/ch06-certificates.html](https://xtls.github.io/document/level-0/ch06-certificates.html) 、[https://xtls.github.io/document/level-0/ch07-xray-server.html](https://xtls.github.io/document/level-0/ch07-xray-server.html)
-- Xray-core XHTTP 官方讨论 XHTTP: Beyond REALITY：[https://github.com/XTLS/Xray-core/discussions/4113](https://github.com/XTLS/Xray-core/discussions/4113)
-- Xray-core XHTTP + CDN 上下行分离讨论：[https://github.com/XTLS/Xray-core/discussions/4118](https://github.com/XTLS/Xray-core/discussions/4118)
-- XHTTP + CDN 上下行分离手搓参考：[https://jollyroger.top/sites/361.html](https://jollyroger.top/sites/361.html)
-
-### Mihomo-xhttp
-
-- Mihomo v1.19.24 Release：[https://github.com/MetaCubeX/mihomo/releases/tag/v1.19.24](https://github.com/MetaCubeX/mihomo/releases/tag/v1.19.24)
-- Mihomo XHTTP 讨论：[https://github.com/MetaCubeX/mihomo/discussions/2669](https://github.com/MetaCubeX/mihomo/discussions/2669)
-- Mihomo 文档（VLESS）：[https://wiki.metacubex.one/config/proxies/vless/](https://wiki.metacubex.one/config/proxies/vless/)
-- Mihomo 文档（Transport）：[https://wiki.metacubex.one/config/proxies/transport/](https://wiki.metacubex.one/config/proxies/transport/)
-- Mihomo 文档（TLS）：[https://wiki.metacubex.one/config/proxies/tls/](https://wiki.metacubex.one/config/proxies/tls/)
-- Mihomo 官方配置示例 `docs/config.yaml`：[https://github.com/MetaCubeX/mihomo/blob/Meta/docs/config.yaml](https://github.com/MetaCubeX/mihomo/blob/Meta/docs/config.yaml)
-- Mihomo 分流规则配置参考：[https://github.com/xiaolin-007/clash-verge-script](https://github.com/xiaolin-007/clash-verge-script)
-
-### xpadding
-
-- Xray-core v26.2.6 Release：[https://github.com/XTLS/Xray-core/releases/tag/v26.2.6](https://github.com/XTLS/Xray-core/releases/tag/v26.2.6)
-- Xray-core Solution to the xpadding leak：[https://github.com/XTLS/Xray-core/issues/4346](https://github.com/XTLS/Xray-core/issues/4346)
-- XTLS/BBS 重拳出击XHTTP！科福瑞的忠实用户应该如何应对？：[https://github.com/XTLS/BBS/issues/25](https://github.com/XTLS/BBS/issues/25)
-- Mihomo v1.19.24 Release：[https://github.com/MetaCubeX/mihomo/releases/tag/v1.19.24](https://github.com/MetaCubeX/mihomo/releases/tag/v1.19.24)
-- Mihomo 文档（Transport）：[https://wiki.metacubex.one/config/proxies/transport/](https://wiki.metacubex.one/config/proxies/transport/)
-- Mihomo 官方配置示例 `docs/config.yaml`：[https://github.com/MetaCubeX/mihomo/blob/Meta/docs/config.yaml](https://github.com/MetaCubeX/mihomo/blob/Meta/docs/config.yaml)
-
-### ECH
-
-- Cloudflare ECH 文档：[https://developers.cloudflare.com/ssl/edge-certificates/ech/](https://developers.cloudflare.com/ssl/edge-certificates/ech/)
-- Xray-core v25.7.26 Release（TLS client/server 支持 ECH）：[https://github.com/XTLS/Xray-core/releases/tag/v25.7.26](https://github.com/XTLS/Xray-core/releases/tag/v25.7.26)
-- Xray-core v26.3.27 Release（ECH 查询行为调整）：[https://github.com/XTLS/Xray-core/releases/tag/v26.3.27](https://github.com/XTLS/Xray-core/releases/tag/v26.3.27)
-- Xray TLSObject 文档（`echConfigList` / `echForceQuery`）：[https://xtls.github.io/config/transport.html](https://xtls.github.io/config/transport.html)
-- Xray VLESS 分享链接标准（`ech` 对应 `echConfigList`）：[https://github.com/XTLS/Xray-core/discussions/716](https://github.com/XTLS/Xray-core/discussions/716)
-- Mihomo ECH：[https://github.com/MetaCubeX/mihomo/blob/Meta/adapter/outbound/ech.go](https://github.com/MetaCubeX/mihomo/blob/Meta/adapter/outbound/ech.go)
+- [Xray XHTTP: Beyond REALITY](https://github.com/XTLS/Xray-core/discussions/4113)
+- [XHTTP + CDN 上下行分离](https://github.com/XTLS/Xray-core/discussions/4118)
+- [Xray VLESS 分享链接标准](https://github.com/XTLS/Xray-core/discussions/716)
+- [Xray transport 配置](https://xtls.github.io/config/transport.html)
+- [Mihomo VLESS 文档](https://wiki.metacubex.one/config/proxies/vless/)
+- [Mihomo transport 文档](https://wiki.metacubex.one/config/proxies/transport/)
+- [Cloudflare ECH 文档](https://developers.cloudflare.com/ssl/edge-certificates/ech/)
+- [XHTTP 原理与上下行分离介绍](https://habr.com/en/articles/990208/)
