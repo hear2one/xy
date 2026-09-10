@@ -6,7 +6,7 @@ NODE_HY2_NAME="hysteria2 直连"
 NODE_HY2_TAG=$(rawurlencode "$NODE_HY2_NAME")
 
 sed -i "/#${NODE_HY2_TAG}\$/d" "$V2RAYN_FILE"
-printf '%s\n' "hysteria2://$(rawurlencode "$HY2_PASSWORD")@$(format_uri_host "$BASE_SERVER"):${HY2_PORT}/?sni=${REALITY_DOMAIN}&insecure=0#${NODE_HY2_TAG}" >> "$V2RAYN_FILE"
+printf '%s\n' "hysteria2://$(rawurlencode "$HY2_PASSWORD")@$(format_uri_host "$BASE_SERVER"):${HY2_PORT_SPEC}/?sni=${REALITY_DOMAIN}&insecure=0#${NODE_HY2_TAG}" >> "$V2RAYN_FILE"
 chown "$(stat -c '%u:%g' "$USER_HOME")" "$V2RAYN_FILE"
 
 update_mihomo_file() {
@@ -17,6 +17,9 @@ update_mihomo_file() {
   awk -v node_name="$NODE_HY2_NAME" \
       -v server="$BASE_SERVER" \
       -v port="$HY2_PORT" \
+      -v ports="$HY2_PORT_SPEC" \
+      -v hop_enabled="$HY2_HOP_ENABLED" \
+      -v hop_interval="$HY2_HOP_INTERVAL" \
       -v password="$HY2_PASSWORD" \
       -v sni="$REALITY_DOMAIN" '
     skip && !(/^  - name: / || /^proxy-groups:/) { next }
@@ -28,6 +31,10 @@ update_mihomo_file() {
       print "    type: hysteria2"
       print "    server: \"" server "\""
       print "    port: " port
+      if (hop_enabled == "true") {
+        print "    ports: \"" ports "\""
+        print "    hop-interval: " hop_interval
+      }
       print "    password: \"" password "\""
       print "    sni: " sni
       print "    alpn:"
@@ -45,6 +52,10 @@ update_mihomo_file() {
         print "    type: hysteria2"
         print "    server: \"" server "\""
         print "    port: " port
+        if (hop_enabled == "true") {
+          print "    ports: \"" ports "\""
+          print "    hop-interval: " hop_interval
+        }
         print "    password: \"" password "\""
         print "    sni: " sni
         print "    alpn:"

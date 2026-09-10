@@ -149,15 +149,43 @@ if [[ -f /etc/hysteria/config.yaml ]]; then
   HY2_PASSWORD=$(sed -n 's/^[[:space:]]*password:[[:space:]]*//p' /etc/hysteria/config.yaml | head -n1)
 fi
 
-read -rp "请输入 Hysteria2 UDP 端口 [1-65535] (默认 8443): " HY2_PORT
-HY2_PORT=${HY2_PORT:-8443}
-if [[ ! "$HY2_PORT" =~ ^[0-9]+$ ]] ||
-   (( HY2_PORT < 1 || HY2_PORT > 65535 )); then
-  error "Hysteria2 UDP 端口无效，请输入 1-65535 的整数"
+read -rp "是否启用 Hysteria2 UDP 端口跳跃 [y/N]: " HY2_HOP_REPLY
+if [[ "${HY2_HOP_REPLY,,}" == "y" ]]; then
+  HY2_HOP_ENABLED=true
+  read -rp "请输入端口范围 [起始-结束] (默认 20000-50000): " HY2_PORT_SPEC
+  HY2_PORT_SPEC=${HY2_PORT_SPEC:-20000-50000}
+  if [[ ! "$HY2_PORT_SPEC" =~ ^([0-9]{1,5})-([0-9]{1,5})$ ]]; then
+    error "端口跳跃范围无效，请使用 起始-结束 格式"
+  fi
+  HY2_PORT=${BASH_REMATCH[1]}
+  HY2_PORT_END=${BASH_REMATCH[2]}
+  if (( HY2_PORT < 1 || HY2_PORT_END > 65535 || HY2_PORT >= HY2_PORT_END )); then
+    error "端口跳跃范围无效，须满足 1 <= 起始端口 < 结束端口 <= 65535"
+  fi
+  read -rp "请输入跳跃间隔秒数 [5-3600] (默认 30): " HY2_HOP_INTERVAL
+  HY2_HOP_INTERVAL=${HY2_HOP_INTERVAL:-30}
+  if [[ ! "$HY2_HOP_INTERVAL" =~ ^[0-9]+$ ]] ||
+     (( HY2_HOP_INTERVAL < 5 || HY2_HOP_INTERVAL > 3600 )); then
+    error "跳跃间隔无效，请输入 5-3600 的整数秒"
+  fi
+else
+  HY2_HOP_ENABLED=false
+  read -rp "请输入 Hysteria2 UDP 端口 [1-65535] (默认 8443): " HY2_PORT
+  HY2_PORT=${HY2_PORT:-8443}
+  if [[ ! "$HY2_PORT" =~ ^[0-9]+$ ]] ||
+     (( HY2_PORT < 1 || HY2_PORT > 65535 )); then
+    error "Hysteria2 UDP 端口无效，请输入 1-65535 的整数"
+  fi
+  HY2_PORT_SPEC=$HY2_PORT
+  HY2_HOP_INTERVAL=30
 fi
-if [[ -f /etc/nginx/nginx.conf ]] &&
-   grep -Eq "^[[:space:]]*listen[[:space:]]+${HY2_PORT}[[:space:]]+quic([[:space:]]|;)" /etc/nginx/nginx.conf; then
-  error "UDP ${HY2_PORT} 已被 XHTTP H3 使用"
+
+if [[ -f /etc/nginx/nginx.conf ]]; then
+  while IFS= read -r quic_port; do
+    if (( quic_port >= HY2_PORT && quic_port <= ${HY2_PORT_END:-$HY2_PORT} )); then
+      error "UDP ${quic_port} 已被 XHTTP H3 使用，不能包含在 Hysteria2 端口范围 ${HY2_PORT_SPEC} 中"
+    fi
+  done < <(sed -nE 's/^[[:space:]]*listen[[:space:]]+([0-9]+)[[:space:]]+quic([[:space:]]|;).*/\1/p' /etc/nginx/nginx.conf)
 fi
 
 DEFAULT_HY2_PASSWORD="${HY2_PASSWORD:-$(openssl rand -hex 16)}"
@@ -167,7 +195,11 @@ HY2_PASSWORD=${HY2_PASSWORD:-$DEFAULT_HY2_PASSWORD}
 
 info "VPS IP:       $BASE_SERVER"
 info "Reality 域名: $REALITY_DOMAIN"
-info "Hysteria2:   UDP $HY2_PORT"
+if [[ "$HY2_HOP_ENABLED" == true ]]; then
+  info "Hysteria2:   UDP ${HY2_PORT_SPEC}，每 ${HY2_HOP_INTERVAL} 秒跳跃"
+else
+  info "Hysteria2:   UDP $HY2_PORT"
+fi
 echo ""
 
 # ==================================================
@@ -182,7 +214,8 @@ HYSTERIA_CONF_DIR="/etc/hysteria"
 HYSTERIA_CONF="${HYSTERIA_CONF_DIR}/config.yaml"
 HYSTERIA_SERVICE="hysteria-server"
 
-if [[ ! -x "$HYSTERIA_BIN" ]]; then
+install_hysteria_binary() {
+  local hy_tmp
   case "$(uname -m)" in
     x86_64|amd64) HY_ARCH="amd64" ;;
     aarch64|arm64) HY_ARCH="arm64" ;;
@@ -191,17 +224,42 @@ if [[ ! -x "$HYSTERIA_BIN" ]]; then
     *) error "不支持的 CPU 架构: $(uname -m)，无法安装 Hysteria2" ;;
   esac
   info "下载 Hysteria2 (linux-${HY_ARCH})..."
-  curl -fsSL -o "$HYSTERIA_BIN" \
+  hy_tmp=$(mktemp)
+  curl -fsSL -o "$hy_tmp" \
     "https://github.com/apernet/hysteria/releases/latest/download/hysteria-linux-${HY_ARCH}" \
-    || error "Hysteria2 下载失败"
-  chmod +x "$HYSTERIA_BIN"
+    || { rm -f "$hy_tmp"; error "Hysteria2 下载失败"; }
+  install -m 755 "$hy_tmp" "$HYSTERIA_BIN"
+  rm -f "$hy_tmp"
+}
+
+if [[ ! -x "$HYSTERIA_BIN" ]]; then
+  install_hysteria_binary
 else
   info "检测到已安装 Hysteria2，跳过下载"
 fi
 
+if [[ "$HY2_HOP_ENABLED" == true ]]; then
+  HY2_VERSION=$($HYSTERIA_BIN version 2>&1 | grep -Eo 'v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1 | sed 's/^v//')
+  if [[ -z "$HY2_VERSION" ]] ||
+     [[ "$(printf '%s\n' '2.8.0' "$HY2_VERSION" | sort -V | head -n1)" != "2.8.0" ]]; then
+    warn "端口范围监听需要 Hysteria2 2.8.0+，正在更新（当前 ${HY2_VERSION:-未知}）"
+    install_hysteria_binary
+    HY2_VERSION=$($HYSTERIA_BIN version 2>&1 | grep -Eo 'v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1 | sed 's/^v//')
+    [[ -n "$HY2_VERSION" ]] || error "无法确认 Hysteria2 版本"
+    [[ "$(printf '%s\n' '2.8.0' "$HY2_VERSION" | sort -V | head -n1)" == "2.8.0" ]] ||
+      error "Hysteria2 ${HY2_VERSION} 不支持内置端口范围监听，需要 2.8.0+"
+  fi
+  if ! command -v nft >/dev/null 2>&1 && ! command -v iptables >/dev/null 2>&1; then
+    info "端口跳跃需要 nftables 或 iptables，正在安装 iptables..."
+    pkg_install iptables
+  fi
+  command -v nft >/dev/null 2>&1 || command -v iptables >/dev/null 2>&1 ||
+    error "未找到 nftables/iptables，无法启用端口跳跃"
+fi
+
 install -d -m 755 "$HYSTERIA_CONF_DIR"
 cat > "$HYSTERIA_CONF" <<EOF
-listen: :${HY2_PORT}
+listen: :${HY2_PORT_SPEC}
 
 tls:
   cert: /etc/ssl/private/fullchain.cer
@@ -270,7 +328,7 @@ if [[ "$OS_ID" != "alpine" ]]; then
   sleep 1
   systemctl is-active --quiet "$HYSTERIA_SERVICE" || error "Hysteria2 启动失败，请检查 journalctl -u ${HYSTERIA_SERVICE}"
 fi
-info "Hysteria2 已监听 UDP ${HY2_PORT}"
+info "Hysteria2 已监听 UDP ${HY2_PORT_SPEC}"
 
 # ==================================================
 # 追加客户端节点
@@ -280,7 +338,7 @@ NODE_HY2_NAME="hysteria2 直连"
 NODE_HY2_TAG=$(rawurlencode "$NODE_HY2_NAME")
 
 sed -i "/#${NODE_HY2_TAG}\$/d" "$V2RAYN_FILE"
-printf '%s\n' "hysteria2://$(rawurlencode "$HY2_PASSWORD")@$(format_uri_host "$BASE_SERVER"):${HY2_PORT}/?sni=${REALITY_DOMAIN}&insecure=0#${NODE_HY2_TAG}" >> "$V2RAYN_FILE"
+printf '%s\n' "hysteria2://$(rawurlencode "$HY2_PASSWORD")@$(format_uri_host "$BASE_SERVER"):${HY2_PORT_SPEC}/?sni=${REALITY_DOMAIN}&insecure=0#${NODE_HY2_TAG}" >> "$V2RAYN_FILE"
 chown "$(stat -c '%u:%g' "$USER_HOME")" "$V2RAYN_FILE"
 
 update_mihomo_file() {
@@ -291,6 +349,9 @@ update_mihomo_file() {
   awk -v node_name="$NODE_HY2_NAME" \
       -v server="$BASE_SERVER" \
       -v port="$HY2_PORT" \
+      -v ports="$HY2_PORT_SPEC" \
+      -v hop_enabled="$HY2_HOP_ENABLED" \
+      -v hop_interval="$HY2_HOP_INTERVAL" \
       -v password="$HY2_PASSWORD" \
       -v sni="$REALITY_DOMAIN" '
     skip && !(/^  - name: / || /^proxy-groups:/) { next }
@@ -302,6 +363,10 @@ update_mihomo_file() {
       print "    type: hysteria2"
       print "    server: \"" server "\""
       print "    port: " port
+      if (hop_enabled == "true") {
+        print "    ports: \"" ports "\""
+        print "    hop-interval: " hop_interval
+      }
       print "    password: \"" password "\""
       print "    sni: " sni
       print "    alpn:"
@@ -319,6 +384,10 @@ update_mihomo_file() {
         print "    type: hysteria2"
         print "    server: \"" server "\""
         print "    port: " port
+        if (hop_enabled == "true") {
+          print "    ports: \"" ports "\""
+          print "    hop-interval: " hop_interval
+        }
         print "    password: \"" password "\""
         print "    sni: " sni
         print "    alpn:"

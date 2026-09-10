@@ -10,7 +10,8 @@ HYSTERIA_CONF_DIR="/etc/hysteria"
 HYSTERIA_CONF="${HYSTERIA_CONF_DIR}/config.yaml"
 HYSTERIA_SERVICE="hysteria-server"
 
-if [[ ! -x "$HYSTERIA_BIN" ]]; then
+install_hysteria_binary() {
+  local hy_tmp
   case "$(uname -m)" in
     x86_64|amd64) HY_ARCH="amd64" ;;
     aarch64|arm64) HY_ARCH="arm64" ;;
@@ -19,17 +20,42 @@ if [[ ! -x "$HYSTERIA_BIN" ]]; then
     *) error "不支持的 CPU 架构: $(uname -m)，无法安装 Hysteria2" ;;
   esac
   info "下载 Hysteria2 (linux-${HY_ARCH})..."
-  curl -fsSL -o "$HYSTERIA_BIN" \
+  hy_tmp=$(mktemp)
+  curl -fsSL -o "$hy_tmp" \
     "https://github.com/apernet/hysteria/releases/latest/download/hysteria-linux-${HY_ARCH}" \
-    || error "Hysteria2 下载失败"
-  chmod +x "$HYSTERIA_BIN"
+    || { rm -f "$hy_tmp"; error "Hysteria2 下载失败"; }
+  install -m 755 "$hy_tmp" "$HYSTERIA_BIN"
+  rm -f "$hy_tmp"
+}
+
+if [[ ! -x "$HYSTERIA_BIN" ]]; then
+  install_hysteria_binary
 else
   info "检测到已安装 Hysteria2，跳过下载"
 fi
 
+if [[ "$HY2_HOP_ENABLED" == true ]]; then
+  HY2_VERSION=$($HYSTERIA_BIN version 2>&1 | grep -Eo 'v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1 | sed 's/^v//')
+  if [[ -z "$HY2_VERSION" ]] ||
+     [[ "$(printf '%s\n' '2.8.0' "$HY2_VERSION" | sort -V | head -n1)" != "2.8.0" ]]; then
+    warn "端口范围监听需要 Hysteria2 2.8.0+，正在更新（当前 ${HY2_VERSION:-未知}）"
+    install_hysteria_binary
+    HY2_VERSION=$($HYSTERIA_BIN version 2>&1 | grep -Eo 'v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1 | sed 's/^v//')
+    [[ -n "$HY2_VERSION" ]] || error "无法确认 Hysteria2 版本"
+    [[ "$(printf '%s\n' '2.8.0' "$HY2_VERSION" | sort -V | head -n1)" == "2.8.0" ]] ||
+      error "Hysteria2 ${HY2_VERSION} 不支持内置端口范围监听，需要 2.8.0+"
+  fi
+  if ! command -v nft >/dev/null 2>&1 && ! command -v iptables >/dev/null 2>&1; then
+    info "端口跳跃需要 nftables 或 iptables，正在安装 iptables..."
+    pkg_install iptables
+  fi
+  command -v nft >/dev/null 2>&1 || command -v iptables >/dev/null 2>&1 ||
+    error "未找到 nftables/iptables，无法启用端口跳跃"
+fi
+
 install -d -m 755 "$HYSTERIA_CONF_DIR"
 cat > "$HYSTERIA_CONF" <<EOF
-listen: :${HY2_PORT}
+listen: :${HY2_PORT_SPEC}
 
 tls:
   cert: /etc/ssl/private/fullchain.cer
@@ -98,4 +124,4 @@ if [[ "$OS_ID" != "alpine" ]]; then
   sleep 1
   systemctl is-active --quiet "$HYSTERIA_SERVICE" || error "Hysteria2 启动失败，请检查 journalctl -u ${HYSTERIA_SERVICE}"
 fi
-info "Hysteria2 已监听 UDP ${HY2_PORT}"
+info "Hysteria2 已监听 UDP ${HY2_PORT_SPEC}"

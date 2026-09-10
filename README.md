@@ -42,7 +42,7 @@ GitHub Release 中的 8 个脚本与仓库 [`dist/`](./dist/) 内容一致：
 | `add-dual-cdn.sh` | 上行 CDN-A、下行 CDN-B | 已运行主脚本 |
 | `add-dual-ip.sh` | 上行 IPv4、下行 IPv6 | VPS 同时具有 IPv4 和 IPv6 |
 | `add-quic.sh` | XHTTP H3、H2/H3 上下行分离 | 已运行主脚本，需放行 UDP 端口 |
-| `add-hysteria2.sh` | 追加 Hysteria2 节点 | 已运行主脚本，需放行 UDP 端口 |
+| `add-hysteria2.sh` | 追加 Hysteria2 节点，可选 UDP 端口跳跃 | 已运行主脚本，需放行 UDP 端口或范围 |
 
 ## 快速部署
 
@@ -114,6 +114,8 @@ bash ~/add-hysteria2.sh
 ```
 
 扩展脚本会读取现有配置，并更新客户端文件与 HTTPS 订阅。新增端口需要在系统防火墙和云平台安全组中放行；QUIC/Hysteria2 使用 UDP，追加 Reality 节点使用 TCP。
+
+Hysteria2 可选择单个 UDP 端口，或使用例如 `20000-50000` 的端口跳跃范围。启用跳跃时，服务端要求 Hysteria2 2.8.0+ 及 nftables/iptables；脚本会检查并按需更新。V2RayN/Shadowrocket 分享链接使用标准多端口 URI，Mihomo 输出 `ports` 与 `hop-interval`。云平台安全组和系统防火墙必须放行整个 UDP 范围。
 
 ## CDN 下行优先 IPv4
 
