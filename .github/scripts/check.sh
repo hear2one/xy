@@ -17,4 +17,5 @@ for script in "$OUT_DIR"/*.sh; do
 done
 bash tests/input-validation.sh
 bash tests/geodata-update.sh
+bash tests/cdn-download-options.sh
 echo 'All installer builds, Bash syntax checks and input regression tests passed.'

@@ -1,4 +1,5 @@
 @@include src/common/input-validation.sh
+@@include src/common/cdn-download-options.sh
 # ==================================================
 # 初始化说明与交互参数
 # ==================================================

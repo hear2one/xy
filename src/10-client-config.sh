@@ -3,6 +3,7 @@
 # ==================================================
 
 info "[6/6] 生成客户端配置"
+@@include src/common/cdn-download-options.sh
 XHTTP_PATH_ENC=${XHTTP_PATH//\//%2F}
 
 if [[ "$FEATURE_XPADDING" == true ]]; then

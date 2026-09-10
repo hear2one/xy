@@ -26,6 +26,17 @@ for builder in .github/scripts/build-*.sh; do bash "$builder"; done
 
 审查结果和验证边界见 [代码审查记录](./docs/代码审查记录.md)。
 
+### CDN 下行 IPv4 可选优化
+
+若客户端 IPv6 不可用且分离节点首次连接慢，可在新部署时使用
+`CDN_DOWNLOAD_IPV4=true bash ./install-xpadding.sh`（普通版 `install.sh` 同样支持）。
+默认关闭。开启后，仅 V2RayN/Xray 分享链接中的“上行 Reality、下行 TLS+CDN”节点增加
+`downloadSettings.sockopt.domainStrategy: ForceIPv4`；保持域名、SNI、ECH 和认证参数不变。
+此选项不改变服务器出站策略，也不修改 Mihomo 配置及扩展脚本输出。
+
+已经部署的节点应直接修改客户端 Extra，不必重跑安装脚本，以免重新生成密钥。
+具体修改位置及实测结果见 [CDN 下行连接排查](./docs/CDN下行连接排查.md)。
+
 ## 部署模式
 
 仓库文档用于搭建包含以下 5 种模式：
