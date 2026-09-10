@@ -18,7 +18,7 @@
 bash .github/scripts/check.sh
 ```
 
-检查会在临时目录构建全部 8 个安装脚本，检查 Bash 语法和模板展开，并运行输入校验及 geodata 更新回归测试；不会安装服务。生成用于分发的 `dist/` 文件：
+检查会在临时目录构建全部 8 个安装脚本，检查 Bash 语法、模板展开，并确认生成结果与仓库中的 `dist/` 完全一致；随后运行输入校验及 geodata 更新回归测试，不会安装服务。更新提交到仓库的 `dist/` 文件：
 
 ```bash
 for builder in .github/scripts/build-*.sh; do bash "$builder"; done

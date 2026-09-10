@@ -15,6 +15,20 @@ for script in "$OUT_DIR"/*.sh; do
     exit 1
   fi
 done
+
+# The repository exposes runnable installers directly under dist/. Keep the
+# committed artifacts byte-for-byte identical to a clean source build.
+for script in "$OUT_DIR"/*.sh; do
+  committed="$ROOT_DIR/dist/$(basename "$script")"
+  [[ -f "$committed" ]] || {
+    echo "Missing committed installer: $committed" >&2
+    exit 1
+  }
+  cmp -s "$script" "$committed" || {
+    echo "Stale committed installer: $committed" >&2
+    exit 1
+  }
+done
 bash tests/input-validation.sh
 bash tests/geodata-update.sh
 bash tests/cdn-download-options.sh

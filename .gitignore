@@ -1,1 +1,2 @@
-dist/
+# dist/*.sh are committed release artifacts. Build them from source with
+# `.github/scripts/build-*.sh` and verify freshness in CI.
