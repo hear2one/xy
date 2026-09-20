@@ -3,14 +3,19 @@
 # ==================================================
 
 info "[3/6] 编译安装 Nginx"
-NGINX_VER="1.30.1"
+NGINX_VER="1.30.5"
+NGINX_SHA256="6c20565aa2325cb82216ae804f4a4ff1875179014759a381c42ddc8e11c4906d"
 
 install_nginx() {
   info "安装编译依赖..."
   install_build_deps
 
-  cd /tmp
+  local build_dir
+  build_dir=$(mktemp -d) || error "创建 Nginx 临时构建目录失败"
+  cd "$build_dir" || error "无法进入 Nginx 临时构建目录: $build_dir"
   wget -q "https://nginx.org/download/nginx-${NGINX_VER}.tar.gz"
+  echo "${NGINX_SHA256}  nginx-${NGINX_VER}.tar.gz" | sha256sum -c - || \
+    error "Nginx 源码包 SHA-256 校验失败"
   tar -xf "nginx-${NGINX_VER}.tar.gz"
   cd "nginx-${NGINX_VER}"
 
@@ -33,7 +38,7 @@ install_nginx() {
   make -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
   make install
 
-  cd /tmp && rm -rf "nginx-${NGINX_VER}" "nginx-${NGINX_VER}.tar.gz"
+  cd / && rm -rf "$build_dir"
   mkdir -p /var/log/nginx
 
   info "创建 ${SERVICE_TYPE} 服务..."

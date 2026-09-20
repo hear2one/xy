@@ -67,7 +67,6 @@ cat > /usr/local/etc/xray/config.json <<XRAYEOF
                         "${TARGET_HOST}"
                     ],
                     "privateKey": "${PRIVATE_KEY}",
-                    "minClientVer": "1.8.2",
                     "shortIds": [
                         "${SHORT_ID}"
                     ]
@@ -98,6 +97,7 @@ cat > /usr/local/etc/xray/config.json <<XRAYEOF
     ]
 }
 XRAYEOF
+chmod 600 /usr/local/etc/xray/config.json
 
 info "校验配置 (xray -test) ..."
 if ! /usr/local/bin/xray -test -config /usr/local/etc/xray/config.json; then

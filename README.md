@@ -26,7 +26,8 @@
 - V2RayN/Shadowrocket、Mihomo 完整配置与纯节点配置
 - HTTPS 订阅地址及订阅二维码
 - geoip/geosite 每周自动更新，替换前校验，失败时回滚
-- FakeDNS 与严格禁止回国策略
+- Xray 可选择保留当前版本、最新稳定版、最新预发布版或指定版本
+- FakeDNS、广告拦截与严格禁止回国策略
 - 安装脚本内置卸载入口
 
 ## 发布脚本
@@ -75,6 +76,19 @@ xpadding 默认启用，安装过程中可选择 ECH；FinalMask 默认关闭。
 curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install-xpadding.sh -o ~/install-xpadding.sh
 bash ~/install-xpadding.sh
 ```
+
+### Xray 版本选择
+
+主安装器和无域名安装器都会在安装阶段询问 Xray 版本。新安装默认使用最新稳定版；检测到已有 Xray 时默认保留当前版本，也可以选择升级到最新稳定版、最新预发布版，或输入 `vX.Y.Z` 指定版本。无人值守运行可预设：
+
+```bash
+XRAY_VERSION_MODE=stable bash ~/install-xpadding.sh
+XRAY_VERSION_MODE=beta bash ~/install-xpadding.sh
+XRAY_VERSION_MODE=version XRAY_VERSION=v26.9.9 bash ~/install-xpadding.sh
+XRAY_VERSION_MODE=keep bash ~/install-xpadding.sh
+```
+
+`keep` 仅适用于已经安装 Xray 的系统。服务端 REALITY 默认不设置 `minClientVer`：Xray 官方将它定义为可选的最低客户端版本限制，只有明确准备拒绝旧客户端时才应设置。
 
 ### 无域名：XHTTP + Reality 单节点
 
@@ -167,8 +181,11 @@ bash ~/install.sh uninstall -y
 ## 安全与路由行为
 
 - CDN XHTTP 入站启用 VLESS Encryption，避免 CDN 中间节点读取代理流量内容。
+- Nginx 固定使用 1.30.5，下载后校验 SHA-256，并在私有临时目录中编译。
+- Xray 配置包含私钥，生成后权限固定为 `600`。
+- Nginx 内部 HTTPS 回源端口 `8003` 仅监听 `127.0.0.1`。
 - FakeDNS 地址段 `198.18.0.0/15` 的直连规则固定在阻断规则之前。
-- 默认阻断 `geosite:cn`、`geoip:cn`、私网地址与 BitTorrent。这是严格禁止回国策略，并非国内直连分流。
+- 默认阻断 `geosite:category-ads-all`、`geosite:cn`、`geoip:cn`、私网地址与 BitTorrent。这是广告拦截加严格禁止回国策略，并非国内直连分流。
 - FinalMask 仅写入服务端 XHTTP 入站的 `streamSettings.finalmask`，默认关闭；客户端无需手工添加 `fm`。
 - ECH 只作用于 CDN TLS 链路，默认关闭。
 

@@ -68,8 +68,18 @@ for script in "$OUT_DIR"/*.sh; do
     exit 1
   }
 done
+
+for installer in install.sh install-xpadding.sh; do
+  script="$OUT_DIR/$installer"
+  grep -Fq 'NGINX_VER="1.30.5"' "$script"
+  grep -Fq 'NGINX_SHA256="6c20565aa2325cb82216ae804f4a4ff1875179014759a381c42ddc8e11c4906d"' "$script"
+  grep -Fq 'listen       127.0.0.1:8003 ssl;' "$script"
+  grep -Fq 'chmod 600 /usr/local/etc/xray/config.json' "$script"
+  grep -Fq 'geosite:category-ads-all' "$script"
+done
 bash tests/input-validation.sh
 bash tests/geodata-update.sh
 bash tests/cdn-download-options.sh
 bash tests/hysteria2-port-hopping.sh
+bash tests/xray-version-selection.sh
 echo 'All installer builds, Bash syntax checks and input regression tests passed.'

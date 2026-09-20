@@ -56,6 +56,7 @@ info "写入 /usr/local/etc/xray/config.json ..."
 cat > /usr/local/etc/xray/config.json << XRAYEOF
 @@include templates/xray-config.json.tmpl
 XRAYEOF
+chmod 600 /usr/local/etc/xray/config.json
 
 info "配置 geodata 自动更新..."
 cat > /usr/local/bin/xhttp-cdn-update-geodata.sh <<'UPDATEREOF'

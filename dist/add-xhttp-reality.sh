@@ -356,7 +356,6 @@ new_inbound = {
             "xver": 0,
             "serverNames": [target],
             "privateKey": os.environ["PRIVATE_KEY3"],
-            "minClientVer": "1.8.2",
             "shortIds": [os.environ["SHORT_ID3"]]
         },
         "xhttpSettings": {
@@ -389,6 +388,7 @@ with open(conf_path, "w") as f:
 
 print("OK: inbound port=%d target=%s (%s)" % (port, target, "updated" if replaced else "appended"))
 PYEOF
+chmod 600 "$XRAY_CONF"
 
 info "校验配置 (xray -test) ..."
 if ! xray -test -config "$XRAY_CONF"; then
