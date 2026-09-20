@@ -30,9 +30,9 @@
 - FakeDNS、广告拦截与严格禁止回国策略
 - 安装脚本内置卸载入口
 
-## 发布脚本
+## 安装脚本
 
-GitHub Release 中的 8 个脚本与仓库 [`dist/`](./dist/) 内容一致：
+仓库 [`dist/`](./dist/) 中持续维护以下 8 个脚本。README 的一键命令直接下载 `main/dist`，因此会随 `main` 更新；GitHub Release 仅是推送 `v*` 标签时生成的版本快照，可能落后于 `main/dist`，不再作为默认安装入口。
 
 | 脚本 | 用途 | 使用前提 |
 | --- | --- | --- |
@@ -64,7 +64,7 @@ apk add --no-cache bash curl
 5. 为 XHTTP 路径创建绕过缓存规则。
 
 ```bash
-curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install.sh -o ~/install.sh
+curl -fsSL https://raw.githubusercontent.com/hear2one/xy/main/dist/install.sh -o ~/install.sh
 bash ~/install.sh
 ```
 
@@ -73,7 +73,7 @@ bash ~/install.sh
 xpadding 默认启用，安装过程中可选择 ECH；FinalMask 默认关闭。
 
 ```bash
-curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install-xpadding.sh -o ~/install-xpadding.sh
+curl -fsSL https://raw.githubusercontent.com/hear2one/xy/main/dist/install-xpadding.sh -o ~/install-xpadding.sh
 bash ~/install-xpadding.sh
 ```
 
@@ -95,7 +95,7 @@ XRAY_VERSION_MODE=keep bash ~/install-xpadding.sh
 该模式借用支持 TLS 1.3 的第三方站点作为 Reality target，不安装 Nginx、不申请证书，也不使用 Cloudflare。
 
 ```bash
-curl -fsSL https://github.com/hear2one/xy/releases/latest/download/install-xhttp-reality.sh -o ~/install-xhttp-reality.sh
+curl -fsSL https://raw.githubusercontent.com/hear2one/xy/main/dist/install-xhttp-reality.sh -o ~/install-xhttp-reality.sh
 bash ~/install-xhttp-reality.sh
 ```
 
@@ -107,23 +107,23 @@ bash ~/install-xhttp-reality.sh
 
 ```bash
 # 追加独立端口 XHTTP + Reality 节点
-curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-xhttp-reality.sh -o ~/add-xhttp-reality.sh
+curl -fsSL https://raw.githubusercontent.com/hear2one/xy/main/dist/add-xhttp-reality.sh -o ~/add-xhttp-reality.sh
 bash ~/add-xhttp-reality.sh
 
 # 上行 CDN-A、下行 CDN-B
-curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-dual-cdn.sh -o ~/add-dual-cdn.sh
+curl -fsSL https://raw.githubusercontent.com/hear2one/xy/main/dist/add-dual-cdn.sh -o ~/add-dual-cdn.sh
 bash ~/add-dual-cdn.sh
 
 # 上行 IPv4、下行 IPv6
-curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-dual-ip.sh -o ~/add-dual-ip.sh
+curl -fsSL https://raw.githubusercontent.com/hear2one/xy/main/dist/add-dual-ip.sh -o ~/add-dual-ip.sh
 bash ~/add-dual-ip.sh
 
 # XHTTP H3 与 H2/H3 上下行分离
-curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-quic.sh -o ~/add-quic.sh
+curl -fsSL https://raw.githubusercontent.com/hear2one/xy/main/dist/add-quic.sh -o ~/add-quic.sh
 bash ~/add-quic.sh
 
 # Hysteria2
-curl -fsSL https://github.com/hear2one/xy/releases/latest/download/add-hysteria2.sh -o ~/add-hysteria2.sh
+curl -fsSL https://raw.githubusercontent.com/hear2one/xy/main/dist/add-hysteria2.sh -o ~/add-hysteria2.sh
 bash ~/add-hysteria2.sh
 ```
 
@@ -213,9 +213,9 @@ bash .github/scripts/check.sh
 
 检查会重新构建全部 8 个安装脚本，执行 Bash 语法与模板检查，确认 [`dist/`](./dist/) 与源码生成结果逐字节一致，并运行输入校验和 geodata 更新回归测试。
 
-CI 还会校验生成目录、提交目录和 README 使用同一份 8 文件发布清单，防止新增功能时漏交 `dist`、下载命令或 Release 附件。
+CI 还会校验生成目录、提交目录和 README 使用同一份 8 文件清单，防止新增功能时漏交 `dist` 或 `main/dist` 下载命令。
 
-提交 `main` 只更新仓库代码。推送新的 `v*` 标签后，[Release 工作流](./.github/workflows/release.yml) 才会构建、校验并把 8 个脚本发布到 GitHub Release。
+提交 `main` 后，README 的默认安装地址会直接取得更新后的 `dist`。推送新的 `v*` 标签后，[Release 工作流](./.github/workflows/release.yml) 才会构建、校验并把 8 个脚本保存为对应版本的 GitHub Release 快照。需要可复现部署时，应使用明确的 Release 标签地址，而不是 `releases/latest`。
 
 ## 参考资料
 

@@ -21,9 +21,9 @@ for builder in .github/scripts/build-*.sh; do
   bash "$builder"
 done
 
-# Keep the source builders, committed artifacts, README downloads and Release
-# attachments on one exact manifest. This catches a newly added or stale script
-# before a version tag is published.
+# Keep the source builders, committed artifacts and README main-branch downloads
+# on one exact manifest. Tagged Releases are immutable version snapshots and may
+# intentionally lag behind main/dist until the next v* tag is published.
 mapfile -t built_installers < <(find "$OUT_DIR" -maxdepth 1 -type f -name '*.sh' -printf '%f\n' | sort)
 mapfile -t committed_installers < <(find "$ROOT_DIR/dist" -maxdepth 1 -type f -name '*.sh' -printf '%f\n' | sort)
 if [[ "${built_installers[*]}" != "${EXPECTED_INSTALLERS[*]}" ]]; then
@@ -35,8 +35,8 @@ if [[ "${committed_installers[*]}" != "${EXPECTED_INSTALLERS[*]}" ]]; then
   exit 1
 fi
 for installer in "${EXPECTED_INSTALLERS[@]}"; do
-  grep -Fq "releases/latest/download/${installer}" README.md || {
-    echo "README is missing the latest-release command for ${installer}" >&2
+  grep -Fq "raw.githubusercontent.com/hear2one/xy/main/dist/${installer}" README.md || {
+    echo "README is missing the main/dist download command for ${installer}" >&2
     exit 1
   }
 done
