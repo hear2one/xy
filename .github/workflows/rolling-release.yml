@@ -1,0 +1,78 @@
+name: Publish rolling main installers
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/scripts/**"
+      - ".github/workflows/rolling-release.yml"
+      - "dist/**"
+      - "extensions/**"
+      - "src/**"
+      - "templates/**"
+      - "tests/**"
+      - "README.md"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rolling-main-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build and validate installers
+        run: bash .github/scripts/check.sh
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum *.sh > SHA256SUMS
+
+      - name: Move rolling tag to this commit
+        run: |
+          git tag --force main-latest "$GITHUB_SHA"
+          git push --force origin refs/tags/main-latest
+
+      - name: Create or update rolling Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="Automatically built from main commit ${GITHUB_SHA}. This rolling pre-release is replaced after every relevant main-branch update. Use a versioned v* Release when an immutable snapshot is required."
+          assets=(dist/*.sh dist/SHA256SUMS)
+          if gh release view main-latest >/dev/null 2>&1; then
+            gh release edit main-latest \
+              --title "Continuous main build" \
+              --notes "$notes" \
+              --prerelease
+            for asset in "${assets[@]}"; do
+              uploaded=false
+              for attempt in 1 2 3; do
+                if gh release upload main-latest "$asset" --clobber; then
+                  uploaded=true
+                  break
+                fi
+                sleep 5
+              done
+              "$uploaded" || exit 1
+            done
+          else
+            gh release create main-latest \
+              --verify-tag \
+              --title "Continuous main build" \
+              --notes "$notes" \
+              --prerelease \
+              "${assets[@]}"
+          fi

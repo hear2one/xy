@@ -21,9 +21,9 @@ for builder in .github/scripts/build-*.sh; do
   bash "$builder"
 done
 
-# Keep the source builders, committed artifacts and README main-branch downloads
-# on one exact manifest. Tagged Releases are immutable version snapshots and may
-# intentionally lag behind main/dist until the next v* tag is published.
+# Keep the source builders, committed artifacts and README rolling-Release
+# downloads on one exact manifest. The main-latest workflow refreshes those
+# assets after every relevant main-branch update.
 mapfile -t built_installers < <(find "$OUT_DIR" -maxdepth 1 -type f -name '*.sh' -printf '%f\n' | sort)
 mapfile -t committed_installers < <(find "$ROOT_DIR/dist" -maxdepth 1 -type f -name '*.sh' -printf '%f\n' | sort)
 if [[ "${built_installers[*]}" != "${EXPECTED_INSTALLERS[*]}" ]]; then
@@ -35,8 +35,8 @@ if [[ "${committed_installers[*]}" != "${EXPECTED_INSTALLERS[*]}" ]]; then
   exit 1
 fi
 for installer in "${EXPECTED_INSTALLERS[@]}"; do
-  grep -Fq "raw.githubusercontent.com/hear2one/xy/main/dist/${installer}" README.md || {
-    echo "README is missing the main/dist download command for ${installer}" >&2
+  grep -Fq "releases/download/main-latest/${installer}" README.md || {
+    echo "README is missing the main-latest download command for ${installer}" >&2
     exit 1
   }
 done
