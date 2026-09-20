@@ -16,6 +16,7 @@ EXPECTED_INSTALLERS=(
   install-xhttp-reality.sh
   install-xpadding.sh
 )
+mapfile -t expected_installers < <(printf '%s\n' "${EXPECTED_INSTALLERS[@]}" | sort)
 
 for builder in .github/scripts/build-*.sh; do
   bash "$builder"
@@ -26,11 +27,11 @@ done
 # assets after every relevant main-branch update.
 mapfile -t built_installers < <(find "$OUT_DIR" -maxdepth 1 -type f -name '*.sh' -printf '%f\n' | sort)
 mapfile -t committed_installers < <(find "$ROOT_DIR/dist" -maxdepth 1 -type f -name '*.sh' -printf '%f\n' | sort)
-if [[ "${built_installers[*]}" != "${EXPECTED_INSTALLERS[*]}" ]]; then
+if [[ "${built_installers[*]}" != "${expected_installers[*]}" ]]; then
   printf 'Unexpected built installer manifest:\n  %s\n' "${built_installers[*]}" >&2
   exit 1
 fi
-if [[ "${committed_installers[*]}" != "${EXPECTED_INSTALLERS[*]}" ]]; then
+if [[ "${committed_installers[*]}" != "${expected_installers[*]}" ]]; then
   printf 'Unexpected committed installer manifest:\n  %s\n' "${committed_installers[*]}" >&2
   exit 1
 fi
