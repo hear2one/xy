@@ -67,6 +67,7 @@ cat > /usr/local/etc/xray/config.json <<XRAYEOF
                         "${TARGET_HOST}"
                     ],
                     "privateKey": "${PRIVATE_KEY}",
+                    "minClientVer": "26.3.27",
                     "shortIds": [
                         "${SHORT_ID}"
                     ]

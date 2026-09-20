@@ -12,9 +12,9 @@ EXPECTED_INSTALLERS=(
   add-hysteria2.sh
   add-quic.sh
   add-xhttp-reality.sh
+  install.sh
   install-xhttp-reality.sh
   install-xpadding.sh
-  install.sh
 )
 
 for builder in .github/scripts/build-*.sh; do
@@ -76,7 +76,10 @@ for installer in install.sh install-xpadding.sh; do
   grep -Fq 'listen       127.0.0.1:8003 ssl;' "$script"
   grep -Fq 'chmod 600 /usr/local/etc/xray/config.json' "$script"
   grep -Fq 'geosite:category-ads-all' "$script"
+  grep -Fq '"minClientVer": "26.3.27"' "$script"
 done
+grep -Fq '"minClientVer": "26.3.27"' "$OUT_DIR/install-xhttp-reality.sh"
+grep -Fq '"minClientVer": "26.3.27"' "$OUT_DIR/add-xhttp-reality.sh"
 bash tests/input-validation.sh
 bash tests/geodata-update.sh
 bash tests/cdn-download-options.sh

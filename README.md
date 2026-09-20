@@ -88,7 +88,7 @@ XRAY_VERSION_MODE=version XRAY_VERSION=v26.9.9 bash ~/install-xpadding.sh
 XRAY_VERSION_MODE=keep bash ~/install-xpadding.sh
 ```
 
-`keep` 仅适用于已经安装 Xray 的系统。服务端 REALITY 默认不设置 `minClientVer`：Xray 官方将它定义为可选的最低客户端版本限制，只有明确准备拒绝旧客户端时才应设置。
+`keep` 仅适用于已经安装 Xray 的系统。服务端 REALITY 显式设置 `minClientVer: "26.3.27"`，与 Xray-core 自 v26.7.11 起采用的官方安全基线一致。旧版 Xray 或仍上报 `1.8.2` 的旧 Mihomo 内核会被拒绝，请升级客户端；不要为了兼容而随意降低该值。
 
 ### 无域名：XHTTP + Reality 单节点
 

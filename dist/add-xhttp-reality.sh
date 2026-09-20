@@ -356,6 +356,7 @@ new_inbound = {
             "xver": 0,
             "serverNames": [target],
             "privateKey": os.environ["PRIVATE_KEY3"],
+            "minClientVer": "26.3.27",
             "shortIds": [os.environ["SHORT_ID3"]]
         },
         "xhttpSettings": {

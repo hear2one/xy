@@ -1194,6 +1194,7 @@ cat > /usr/local/etc/xray/config.json << XRAYEOF
                         "${REALITY_DOMAIN}"
                     ],
                     "privateKey": "${PRIVATE_KEY}",
+                    "minClientVer": "26.3.27",
                     "shortIds": [
                         "${SHORT_ID}"
                     ]
