@@ -20,11 +20,12 @@ xray -test -config /usr/local/etc/xray/config.json
 info "启动服务..."
 service_restart xray
 service_restart nginx
-sleep 1
+# Xray may take about 2 seconds to bind :443 after systemd reports active.
+# Subscription checks below still retry and verify the actual response.
+sleep 3
 service_is_active xray || error "Xray 启动失败"
 service_is_active nginx || error "Nginx 启动失败"
 info "Xray 运行中"
 info "Nginx 运行中"
 
 echo ""
-
