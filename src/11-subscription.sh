@@ -1,3 +1,4 @@
+@@include src/common/subscription-check.sh
 # ==================================================
 # 订阅文件与二维码输出
 # ==================================================
@@ -36,11 +37,6 @@ output_subscription_qr() {
   qrencode -t ANSIUTF8 -m 1 "$url"
 }
 
-check_subscription() {
-  cmp -s "$2" <(curl -kfsS --resolve "${REALITY_DOMAIN}:443:127.0.0.1" \
-    "https://${REALITY_DOMAIN}$1") ||
-    error "订阅自检失败: $1"
-}
 
 info "验证订阅链接..."
 check_subscription "/sub/${SUB_TOKEN}/v2rayn.txt" "$SUB_DIR/v2rayn.txt"

@@ -8,6 +8,7 @@ MODULES=(
   extensions/quic/01-read-existing.sh
   extensions/quic/02-server-config.sh
   extensions/quic/03-client-config.sh
+  src/common/subscription-check.sh
   extensions/quic/04-subscription-output.sh
 )
 

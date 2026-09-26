@@ -8,6 +8,7 @@ MODULES=(
   extensions/hysteria2/01-read-existing.sh
   extensions/hysteria2/02-server-config.sh
   extensions/hysteria2/03-client-config.sh
+  src/common/subscription-check.sh
   extensions/hysteria2/04-subscription-output.sh
 )
 

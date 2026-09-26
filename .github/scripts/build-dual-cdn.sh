@@ -8,6 +8,7 @@ MODULES=(
   extensions/dual-cdn/01-read-existing.sh
   extensions/dual-cdn/02-cert-nginx.sh
   extensions/dual-cdn/03-client-config.sh
+  src/common/subscription-check.sh
   extensions/dual-cdn/04-subscription-output.sh
 )
 

@@ -13,6 +13,7 @@ MODULES=(
   extensions/xhttp-reality-direct/01-read-existing.sh
   extensions/xhttp-reality-direct/02-server-config.sh
   extensions/xhttp-reality-direct/03-client-config.sh
+  src/common/subscription-check.sh
   extensions/xhttp-reality-direct/04-subscription-output.sh
 )
 

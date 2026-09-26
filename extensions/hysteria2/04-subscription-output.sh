@@ -22,11 +22,6 @@ update_subscriptions() {
   cp "$MIHOMO_FULL_FILE" "$sub_dir/mihomo-full.yaml"
   cp "$MIHOMO_NODES_FILE" "$sub_dir/mihomo-nodes.yaml"
 
-  check_subscription() {
-    cmp -s "$2" <(curl -kfsS --resolve "${REALITY_DOMAIN}:443:127.0.0.1" \
-      "https://${REALITY_DOMAIN}$1") ||
-      error "订阅自检失败: $1"
-  }
 
   check_subscription "/sub/${token}/v2rayn.txt" "$sub_dir/v2rayn.txt"
   check_subscription "/sub/${token}/mihomo-full.yaml" "$sub_dir/mihomo-full.yaml"

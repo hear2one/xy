@@ -3,21 +3,6 @@
 # ==================================================
 
 update_subscriptions() {
-  # 等待 xray 443 监听就绪（restart 后立即自检会撞上启动空窗，报 Could not connect）
-  wait_xray_443() {
-    local i
-    for i in $(seq 1 20); do
-      if command -v ss >/dev/null 2>&1; then
-        ss -tln | grep -qE ':(443|:443 )' && return 0
-      else
-        (exec 3<>/dev/tcp/127.0.0.1/443) 2>/dev/null && { exec 3>&- 3<&-; return 0; }
-      fi
-      sleep 0.5
-    done
-    return 1
-  }
-  wait_xray_443 || warn "等待 xray 443 超时，订阅自检可能失败"
-
   local token_file="/etc/xhttp-cdn/sub_token"
   [[ -f "$token_file" ]] || {
     warn "未找到订阅 token，仅更新本地客户端文件"
@@ -37,11 +22,6 @@ update_subscriptions() {
   cp "$MIHOMO_FULL_FILE" "$sub_dir/mihomo-full.yaml"
   cp "$MIHOMO_NODES_FILE" "$sub_dir/mihomo-nodes.yaml"
 
-  check_subscription() {
-    cmp -s "$2" <(curl -kfsS --resolve "${REALITY_DOMAIN}:443:127.0.0.1" \
-      "https://${REALITY_DOMAIN}$1") ||
-      error "订阅自检失败: $1"
-  }
 
   check_subscription "/sub/${token}/v2rayn.txt" "$sub_dir/v2rayn.txt"
   check_subscription "/sub/${token}/mihomo-full.yaml" "$sub_dir/mihomo-full.yaml"

@@ -8,6 +8,7 @@ MODULES=(
   extensions/dual-ip/01-read-existing.sh
   extensions/dual-ip/02-server-config.sh
   extensions/dual-ip/03-client-config.sh
+  src/common/subscription-check.sh
   extensions/dual-ip/04-subscription-output.sh
 )
 
